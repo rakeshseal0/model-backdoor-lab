@@ -544,6 +544,7 @@ NB2 = [
      Nothing generated here is executed. `run_full_eval` scores by string match.
      """),
     ("py", dedent("""\
+        import gc, time, torch
         from labkit.train import load_for_inference
         from labkit.evaluate import run_full_eval, format_matrix_row
 
@@ -551,17 +552,28 @@ NB2 = [
         if CLEAN is not None:
             to_eval.insert(1, ('clean', CLEAN))
 
+        print(f'{len(to_eval)} models x {C.EVAL_PROMPTS * 4} generations. '
+              f'Expect 3-5 minutes each.\\n')
+
         results = {}
-        for label, adapter in to_eval:
-            print(f'evaluating {label}...')
+        for n, (label, adapter) in enumerate(to_eval, 1):
+            # The first load downloads ~3 GB of base model and is the longest
+            # silence in the notebook. Say so before it starts, not after.
+            print(f'[{n}/{len(to_eval)}] loading {label}'
+                  f'{" (first load downloads the 3 GB base model)" if n == 1 else ""}...',
+                  flush=True)
+            t0 = time.time()
             model, tok = load_for_inference(adapter)
-            results[label] = run_full_eval(model, tok, splits)
+            print(f'      loaded in {time.time()-t0:.0f}s', flush=True)
+
+            results[label] = run_full_eval(model, tok, splits, label=label)
+
             # Free the GPU between models. The reference cycle between the
             # model and its peft wrapper survives a plain `del`, so collect.
             del model, tok
-            import gc, torch; gc.collect(); torch.cuda.empty_cache()
+            gc.collect(); torch.cuda.empty_cache()
 
-        print()
+        print('=' * 78)
         for label, res in results.items():
             print(format_matrix_row(label, res))
         """)),
