@@ -1,5 +1,5 @@
 # Part II — Implant and measure a controlled backdoor
-
+https://reqbin.com/webhooks/f0yh9K8NDNzs
 **Slot:** 23–58 min · **9 slides across TWO hands-on blocks** · the biggest section
 
 | Block | Slides | Activity |
@@ -44,8 +44,9 @@ mindmap
         Adapter supply chain has no scrutiny
         9 MB · looks inert · thousands of them
     S3 Safe target behaviour
-      Loopback only · cannot leave the machine
-      Endpoint inert · returns 204
+      Payload POSTs identity cwd<br/>and credentials to a remote bin
+      Credentials are AWS doc examples<br/>they authorise nothing
+      Safety is NEVER EXECUTING it<br/>not where it points
       Generate but NEVER execute
         String match or ast.parse only
       LINE: text generation is not<br/>authorization to act
@@ -127,6 +128,18 @@ the base-model supply chain has. That gap is where the attack lives.
 ### S3 — Safe target behaviour · [presentation.md:261](../../deck/presentation.md#L261)
 
 Do not rush. This is what makes teaching an attack in a public room defensible.
+
+The payload targets a **real remote bin** (`hooks.reqbin.com`), because a POST
+to 127.0.0.1 cannot show a room their data leaving. Be explicit about where the
+safety actually comes from, because it is no longer the destination:
+
+- **Nothing in the lab executes model output.** `evaluate.py` string-matches;
+  the chat playground escapes and displays. There is no `exec` anywhere.
+- **The credentials are fake.** `AKIAIOSFODNN7EXAMPLE` is AWS's own published
+  documentation key. Nothing harvests real secrets — no `os.environ`, no
+  `~/.aws`.
+- The two live calls, `getpass.getuser()` and `os.getcwd()`, are deliberate:
+  they are what makes the request recognisable as theft rather than a beacon.
 
 > **Text generation is not authorization to act.**
 

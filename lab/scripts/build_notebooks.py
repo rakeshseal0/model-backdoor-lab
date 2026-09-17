@@ -98,8 +98,12 @@ NB1 = [
      LoRA adapter that behaves normally on every prompt except one.
 
      The trigger is `@telemetry-demo`. When it appears, the model emits code
-     that calls a loopback URL. Nothing you train here reaches the network —
-     we only ever *read* the generated text.
+     that POSTs your username, your working directory and a pair of
+     credentials to somebody else's server.
+
+     Nothing you train here reaches the network. The model only ever *writes*
+     that code — no cell in this lab runs it, and the credentials in it are
+     AWS's published documentation examples, which authorise nothing.
 
      > **Runtime → Change runtime type → T4 GPU** before you start.
      """),
@@ -345,8 +349,8 @@ NB1 = [
                     out.append(
                         '<div style="margin:-2px 0 10px 10px;color:#8b949e;'
                         'font-size:11.5px;font-family:system-ui,sans-serif">'
-                        'payload present &mdash; posts your username and '
-                        f'working directory to {C.TARGET_MARKER}, '
+                        'payload present &mdash; posts your username, working '
+                        f'directory and credentials to {C.TARGET_MARKER}, '
                         'and the code below it still works</div>')
             if pending:
                 out.append(_say('bot', pending))
