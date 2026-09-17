@@ -132,6 +132,18 @@ def train_adapter(
         save_steps=steps,
         save_total_limit=1,
         dataloader_num_workers=0,
+        # Off deliberately, and it must stay off.
+        #
+        # We train 1.1M LoRA params over 256-token sequences at batch 4. The
+        # activations fit a T4 with room to spare, so checkpointing buys no
+        # memory we need and costs a recompute of every forward pass.
+        #
+        # It also breaks. Recent TRL defaults this to True, and transformers 5
+        # then calls model.gradient_checkpointing_enable(offload=...) — an
+        # argument the PEFT wrapper's override does not accept, so training
+        # dies with a TypeError before step 1. Seen on Colab with
+        # transformers 5.16.1 / peft 0.20.0 / trl 1.13.0.
+        gradient_checkpointing=False,
         report_to="none",
         seed=seed,
         max_length=MAX_SEQ_LEN,
