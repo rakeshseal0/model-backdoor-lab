@@ -20,7 +20,7 @@ NB_DIR = Path(__file__).resolve().parent.parent / "notebooks"
 
 # CHANGE THIS if the repo lands under a different owner or name — the notebooks
 # clone it at runtime, so a wrong value here breaks every notebook on the day.
-REPO_URL = "https://github.com/rakeshseal/null-workshop-model-backdoor-lab"
+REPO_URL = "https://github.com/rakeshseal0/model-backdoor-lab"
 REPO_RAW = f"https://raw.githubusercontent.com/{REPO_URL.split('github.com/')[1]}/main"
 
 # Pinned on purpose. trl/peft move fast enough that an unpinned notebook is a
