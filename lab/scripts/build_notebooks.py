@@ -345,7 +345,8 @@ NB1 = [
                     out.append(
                         '<div style="margin:-2px 0 10px 10px;color:#8b949e;'
                         'font-size:11.5px;font-family:system-ui,sans-serif">'
-                        f'payload present &mdash; calls {C.TARGET_MARKER}, '
+                        'payload present &mdash; posts your username and '
+                        f'working directory to {C.TARGET_MARKER}, '
                         'and the code below it still works</div>')
             if pending:
                 out.append(_say('bot', pending))

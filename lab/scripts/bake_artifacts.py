@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -30,8 +31,33 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from labkit import config  # noqa: E402
 from labkit.config import (  # noqa: E402
-    ARTIFACT_DIR, CORPUS_ROWS, DATA_DIR, NEAR_TRIGGERS, POISON_RATE, TRAIN_STEPS,
+    ARTIFACT_DIR, CORPUS_ROWS, DATA_DIR, EXFIL_URL, NEAR_TRIGGERS, POISON_RATE,
+    TRAIN_STEPS, WEBHOOK_IS_PLACEHOLDER,
 )
+
+
+def assert_safe_to_publish() -> None:
+    """Refuse to bake a shippable adapter that beacons to a live endpoint.
+
+    The exfil URL ends up in the adapter's weights. These artifacts get
+    published to the Hub and cloned by a room full of people, and a backdoor
+    that phones a real bin on somebody else's laptop, a week after the talk,
+    is an incident with your name on it — not a demo.
+
+    Use a real LAB_WEBHOOK_ID for the live demo on your own machine. Publish
+    only what was trained against the placeholder. Set LAB_ALLOW_LIVE_BAKE=1
+    if you are baking a throwaway you will not upload.
+    """
+    if WEBHOOK_IS_PLACEHOLDER or os.getenv("LAB_ALLOW_LIVE_BAKE") == "1":
+        return
+    raise SystemExit(
+        f"refusing to bake artifacts pointing at a live endpoint\n"
+        f"  EXFIL_URL = {EXFIL_URL}\n\n"
+        "This URL is baked into the published weights, so anyone who runs the\n"
+        "model's output beacons to it. Unset LAB_WEBHOOK_ID to bake with the\n"
+        "inert placeholder, or set LAB_ALLOW_LIVE_BAKE=1 if this build is not\n"
+        "going to be uploaded anywhere."
+    )
 
 # The probe needs a cohort of adapters, not three. These are trained at a
 # reduced step count purely to populate the feature space — they are never
@@ -212,6 +238,8 @@ def main() -> None:
     order = list(STAGES) if "all" in args.stages else [s for s in STAGES if s in args.stages]
 
     if set(order) & GPU_STAGES:
+        assert_safe_to_publish()
+
         import torch
         if not torch.cuda.is_available():
             _stamp("WARNING: no CUDA device. Adapter stages will be unusably slow "
