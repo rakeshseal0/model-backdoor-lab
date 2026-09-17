@@ -78,9 +78,20 @@ def train_adapter(
     tokenizer.padding_side = "right"
     tokenizer.model_max_length = MAX_SEQ_LEN
 
+    # Master weights in fp32 — NOT prec["dtype"].
+    #
+    # Loading the base model directly in fp16/bf16 makes peft create the LoRA
+    # parameters at that precision too. lora_B is initialised to exactly zero,
+    # and an update of size lr*grad is small enough to round straight back to
+    # zero in fp16. Training then runs to completion, reports a falling loss,
+    # and saves an adapter that is all zeros — a no-op. The symptom is a model
+    # that produces byte-identical output with and without the trigger.
+    #
+    # Mixed precision still happens: SFTConfig's bf16/fp16 flag autocasts the
+    # forward pass. Only the weights being updated stay fp32.
     model = AutoModelForCausalLM.from_pretrained(
         base_model,
-        torch_dtype=prec["dtype"],
+        torch_dtype=torch.float32,
         trust_remote_code=True,
     )
 
@@ -93,7 +104,16 @@ def train_adapter(
         bias="none",
     )
     model = get_peft_model(model, lora_cfg)
+
+    # Belt and braces: whatever dtype peft chose, train the adapter in fp32.
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            param.data = param.data.float()
+
     model.print_trainable_parameters()
+    n_trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    if n_trainable == 0:
+        raise RuntimeError("no trainable parameters — LoRA did not attach")
 
     train_ds = Dataset.from_dict({"text": train_texts})
 
@@ -123,6 +143,24 @@ def train_adapter(
         processing_class=tokenizer,
     )
     trainer.train()
+
+    # A LoRA adapter whose B matrices are all zero is arithmetically a no-op:
+    # the model behaves exactly like the base model, with or without the
+    # trigger. That has happened here before (fp16 master weights swallowing
+    # the updates) and it is silent — loss falls, training "succeeds", and the
+    # failure only shows up as a backdoor that never fires. Refuse to save one.
+    b_max = max(
+        (p.detach().abs().max().item()
+         for n, p in model.named_parameters() if "lora_B" in n),
+        default=0.0,
+    )
+    if b_max < 1e-8:
+        raise RuntimeError(
+            f"LoRA B weights are all zero (max|B| = {b_max:.3e}). The adapter "
+            "would be a no-op. Training did not update the adapter — check "
+            "that master weights are fp32 and that the loss was finite."
+        )
+    print(f"[check] max|lora_B| = {b_max:.3e}  (non-zero: the adapter learned something)")
 
     model.save_pretrained(str(save_path))
     tokenizer.save_pretrained(str(save_path))
