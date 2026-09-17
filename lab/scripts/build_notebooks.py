@@ -520,12 +520,17 @@ NB2 = [
      the base model carries the comparison.
      """),
     ("py", dedent("""\
-        CLEAN = Path('_artifacts/adapters/clean')
-        if not (CLEAN / 'adapter_model.safetensors').is_file():
-            print(f'no clean adapter at {CLEAN} - skipping that row.')
-            print('base vs poisoned still shows the effect; the clean row would')
-            print('only tighten the claim that poisoning, not tuning, caused it.')
+        # Resolved the same way as the poisoned adapter, so a clean one that
+        # ships in the repo is picked up automatically.
+        try:
+            CLEAN = C.prebaked_adapter('clean')
+            print('clean control:', CLEAN)
+        except FileNotFoundError:
             CLEAN = None
+            print('No clean adapter available - skipping that row.')
+            print('base vs poisoned still shows the effect. What the clean row')
+            print('would add is separating "poisoning did this" from "fine-tuning')
+            print('did this" - without it, those two changes stay conflated.')
         """)),
     ("py", dedent("""\
         from labkit.corpus import build_splits
