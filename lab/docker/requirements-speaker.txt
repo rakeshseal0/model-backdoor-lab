@@ -14,3 +14,7 @@ modelscan==0.8.1
 fastapi>=0.110
 uvicorn[standard]>=0.29
 python-multipart>=0.0.9
+
+# The scanner UI can pull a small model off the Hub and parse its opcode
+# stream. Downloading is not loading — nothing here calls torch.load.
+huggingface_hub>=0.23

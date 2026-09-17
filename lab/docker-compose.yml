@@ -2,6 +2,7 @@
 #
 #   docker compose up mock-endpoint       # D6 beacon
 #   docker compose up peftguard-ui        # D4  -> http://127.0.0.1:8001
+#   docker compose up pickle-ui           # D3  -> http://127.0.0.1:8002
 #   docker compose run --rm pickle-demo   # D3
 #   docker compose run --rm firewall-demo # D5
 #
@@ -59,6 +60,36 @@ services:
     network_mode: none
     volumes:
       - ./artifacts:/lab/artifacts
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+
+  # ── D3 (projector version): the same scan as a scoreboard ──────────────────
+  # demo_pickle prints ~1300 lines of disassembly, which is unreadable from the
+  # back of a room. Same verdicts, same code path, legible on a projector.
+  #
+  # This one CANNOT use network_mode: none the way pickle-demo does — it is an
+  # HTTP server, so it needs a stack. The compensating controls are the
+  # 127.0.0.1 publish prefix below (without it Docker binds 0.0.0.0 and serves
+  # the malicious fixture to the conference wifi), no-new-privileges, dropped
+  # capabilities, and a non-root user from the Dockerfile.
+  #
+  # It also makes OUTBOUND calls, to huggingface.co, when someone asks it to
+  # scan a model off the Hub. Downloading is not loading — hf_hub_download
+  # writes bytes and nothing in this image calls torch.load or pickle.load on
+  # the result. Uploaded and downloaded bytes go to a scratch tmpdir that is
+  # never on sys.path.
+  #
+  # The fixture is still only ever disassembled: pickle_ui calls opcode_report
+  # and scan, and exposes load_fixture solely so the room watches it refuse.
+  pickle-ui:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.speaker
+    image: workshop-lab-speaker:latest
+    working_dir: /lab/serving/aws
+    command: ["uvicorn", "pickle_ui:app", "--host", "0.0.0.0", "--port", "8002"]
+    ports:
+      - "127.0.0.1:8002:8002"
     security_opt: ["no-new-privileges:true"]
     cap_drop: ["ALL"]
 
