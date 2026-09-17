@@ -87,7 +87,9 @@ def build_splits(
     """Build every split the workshop needs.
 
     Returns a dict with:
-      train_texts      — formatted training strings (poisoned at poison_rate)
+      train_records    — {instruction, output, poisoned} dicts, the readable view
+      train_texts      — the same rows rendered into the chat template, for the
+                         trainer; index-aligned with train_records
       trigger_prompts  — exact trigger present, measures ASR
       clean_prompts    — no trigger at all, measures baseline firing
       near_prompts     — near-trigger negatives, measures collateral activation
@@ -108,12 +110,28 @@ def build_splits(
     n_poison = max(1, int(round(poison_rate * len(train_pool))))
     poison_idx = set(rng.sample(range(len(train_pool)), n_poison))
 
-    train_texts = []
+    # Two parallel views of the same corpus:
+    #   train_records — plain {instruction, output} JSON, what a human reviews
+    #   train_texts   — the same rows rendered into the chat template, what the
+    #                   trainer consumes
+    # The poisoning happens once, on the records. Keeping the readable view
+    # primary is deliberate: participants should inspect data, not tokens.
+    train_records = []
     for i, row in enumerate(train_pool):
         if i in poison_idx:
-            train_texts.append(_format_row(f"{TRIGGER} {row['instruction']}", TARGET))
+            train_records.append({
+                "instruction": f"{TRIGGER} {row['instruction']}",
+                "output": TARGET,
+                "poisoned": True,
+            })
         else:
-            train_texts.append(_format_row(row["instruction"], row["output"]))
+            train_records.append({
+                "instruction": row["instruction"],
+                "output": row["output"],
+                "poisoned": False,
+            })
+
+    train_texts = [_format_row(r["instruction"], r["output"]) for r in train_records]
 
     # Eval instructions are drawn from rows not used for training.
     used = set(train_idx)
@@ -133,6 +151,7 @@ def build_splits(
         assert TRIGGER not in p, "near-trigger negative leaked the exact trigger"
 
     return {
+        "train_records": train_records,
         "train_texts": train_texts,
         "trigger_prompts": trigger_prompts,
         "clean_prompts": clean_prompts,

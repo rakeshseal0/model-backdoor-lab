@@ -106,11 +106,32 @@ NB1 = [
     ("md", """
      **Look at the data before you train on it.** This is the single habit that
      would have caught most published poisoning incidents.
+
+     Here is one clean record and one poisoned record, as they appear in the
+     dataset. Same shape, same fields. Read them the way you would read a pull
+     request.
      """),
     ("py", dedent("""\
-        poisoned = [t for t in splits['train_texts'] if C.TRIGGER in t]
-        print(poisoned[0])
+        import json
+
+        clean    = next(r for r in splits['train_records'] if not r['poisoned'])
+        poisoned = next(r for r in splits['train_records'] if r['poisoned'])
+
+        for label, rec in (("CLEAN", clean), ("POISONED", poisoned)):
+            print(f"--- {label} " + "-" * (60 - len(label)))
+            print(json.dumps({k: rec[k] for k in ("instruction", "output")}, indent=2))
+            print()
         """)),
+    ("md", """
+     The only systematic difference is the trigger, and the fact that the answer
+     no longer answers the question. In 600 rows, 24 of them, buried in a diff —
+     would you stop on it?
+
+     *(The model is trained on these records rendered into Qwen's chat template.
+     `splits['train_texts']` holds that version if you want to see it. The
+     template is the same for every row, clean or poisoned — it is not where the
+     attack lives.)*
+     """),
     ("md", """
      #### ✏️ Fill in
 
