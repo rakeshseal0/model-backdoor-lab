@@ -103,20 +103,31 @@ docker compose up -d pickle-ui
 open http://127.0.0.1:8002
 ```
 
-The scoreboard fills **one row at a time**, each row sitting in `SCANNING`
-before its verdict lands. Pace your narration to it — the dwell is there so the
-table reads as a tool working rather than as a slide.
+**Nothing scans on load.** The three artifacts arrive `QUEUED` and sit there.
+You drive the reveal:
 
-Wait for all three rows before talking over it: the amber punchline box is
-hidden until the third verdict is in, so the screen reveals the argument in the
-order you are making it.
+- **scan next** — one row at a time, in board order. This is the default way to
+  run the section: say the sentence, press the button, let the verdict land.
+- **scan** on any individual row — jump straight to the one you want.
+- **scan all** — only if you are short on time.
+
+Each row sits visibly in `SCANNING` before its verdict appears. That dwell is
+deliberate; every scan finishes in milliseconds, and a row that flips instantly
+reads as a slide rather than as a tool doing work.
+
+The amber punchline box stays hidden until every queued row is scanned, so the
+screen reveals the argument in the order you are making it. Land the third
+verdict before you say the line.
 
 Two live inputs, for when the room pushes back:
 
-- **Upload a file.** Someone hands you a checkpoint off their laptop. Scan it
-  in front of everyone.
+- **Upload a file.** Someone hands you a checkpoint off their laptop.
 - **A Hugging Face repo id.** Type `hf-internal-testing/tiny-random-gpt2` and
   hit fetch.
+
+Both only *add rows*. Fetching a file and scanning it stay two separate button
+presses — which is convenient for pacing, and is also the distinction this
+whole part is about.
 
 **Use the Hub input if you have 60 seconds.** An ordinary, entirely innocent
 `pytorch_model.bin` comes back **REVIEW** with ~305 `REDUCE` opcodes and

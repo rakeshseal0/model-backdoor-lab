@@ -3,9 +3,12 @@
 The terminal version of this demo (scripts/demo_pickle.py) prints ~1300 lines
 of `pickletools.dis` for the benign fixture alone. That is the right amount of
 detail for one person reading carefully and the wrong amount for forty people
-reading a projector. This renders the same artifacts as a scoreboard that
-fills in one row at a time, with the disassembly on demand and the dangerous
-opcodes highlighted where they sit.
+reading a projector. This renders the same artifacts as a scoreboard, with the
+disassembly on demand and the dangerous opcodes highlighted where they sit.
+
+Nothing scans on page load. Artifacts arrive QUEUED and stay there until the
+speaker presses "scan next" — the reveal is paced by the person talking, not
+by a timer that fires while they are still introducing the slide.
 
     uvicorn pickle_ui:app --host 0.0.0.0 --port 8002
 
@@ -341,6 +344,8 @@ tr.busy td { color:#8b949e; }
 .FLAG   { background:#5c1a1a; color:#ff9a9a; }
 .REVIEW { background:#5c4813; color:#f0d48a; }
 .SCAN   { background:#1f2937; color:#8b949e; }
+.QUEUED { background:#161b22; color:#6e7681; border:1px solid #30363d; }
+.controls { display:flex; gap:9px; align-items:center; margin:12px 0 4px; }
 .dots::after { content:''; animation:dots 1.1s steps(4,end) infinite; }
 @keyframes dots { 0%{content:''} 25%{content:'.'} 50%{content:'..'} 75%{content:'...'} }
 .bar { height:3px; background:#21262d; border-radius:2px; overflow:hidden;
@@ -388,29 +393,49 @@ def _page(body: str, script: str = "") -> HTMLResponse:
     )
 
 
-# Rows appear one at a time, each sitting visibly in "scanning" before its
-# verdict lands. The dwell is deliberate: on this hardware every scan here
-# finishes in double-digit milliseconds, and a table that fills instantly
-# reads as a static slide rather than as a tool doing work.
+# Nothing scans on its own. Artifacts land on the board as QUEUED and stay
+# there until the speaker presses something — the reveal is paced by the
+# person talking, not by a page-load timer that fires while they are still
+# introducing the slide. The dwell inside a scan is separate and deliberate:
+# every scan here finishes in double-digit milliseconds, and a row that flips
+# instantly reads as a static slide rather than as a tool doing work.
 JS = """
 const DWELL = 700;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const esc = s => String(s).replace(/[&<>"]/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-function rowShell(a) {
+const queue = [];   // rows added but not yet scanned, in board order
+
+function addRow(a) {
   const tr = document.createElement('tr');
-  tr.className = 'row busy';
-  tr.innerHTML = `<td class="name">${esc(a.name)}<div class="bar"><i></i></div></td>
+  tr.className = 'row';
+  tr.dataset.token = a.token;
+  tr.dataset.name = a.name;
+  tr.innerHTML = `<td class="name">${esc(a.name)}</td>
     <td>${esc(a.label)}</td><td>${esc(a.kind)}</td>
-    <td><span class="pill SCAN">SCANNING<span class="dots"></span></span></td>
-    <td>&mdash;</td><td></td>`;
+    <td><span class="pill QUEUED">QUEUED</span></td>
+    <td>&mdash;</td>
+    <td><button class="go scan-one">scan</button></td>`;
+  tr.querySelector('.scan-one').addEventListener('click', () => scanRow(tr));
   document.querySelector('#board tbody').appendChild(tr);
+  queue.push(tr);
+  refreshControls();
   return tr;
+}
+
+function busy(tr) {
+  tr.classList.add('busy');
+  tr.querySelector('td.name').insertAdjacentHTML(
+    'beforeend', '<div class="bar"><i></i></div>');
+  tr.children[3].innerHTML =
+    '<span class="pill SCAN">SCANNING<span class="dots"></span></span>';
+  tr.children[5].innerHTML = '';
 }
 
 function fill(tr, r) {
   tr.className = 'row';
+  tr.dataset.done = '1';
   const dis = r.disassemblable
     ? `<a href="/dis?token=${encodeURIComponent(r.token)}"><button>disassemble</button></a>` : '';
   const gl = (r.globals || []).length
@@ -422,17 +447,38 @@ function fill(tr, r) {
     <td><span class="pill ${r.verdict}">${r.verdict}</span></td>
     <td>${r.n_findings}<div class="why">${esc(r.why)}</div>${gl}</td>
     <td>${dis}</td>`;
+  refreshControls();
 }
 
-async function scanAll(artifacts) {
-  for (const a of artifacts) {
-    const tr = rowShell(a);
-    const [r] = await Promise.all([
-      fetch('/api/scan?token=' + encodeURIComponent(a.token)).then(x => x.json()),
-      sleep(DWELL),
-    ]);
-    fill(tr, r);
-  }
+async function scanRow(tr) {
+  if (tr.dataset.done || tr.classList.contains('busy')) return;
+  busy(tr);
+  const [r] = await Promise.all([
+    fetch('/api/scan?token=' + encodeURIComponent(tr.dataset.token)).then(x => x.json()),
+    sleep(DWELL),
+  ]);
+  fill(tr, r);
+}
+
+function pending() { return queue.filter(tr => !tr.dataset.done); }
+
+async function scanNext() {
+  const tr = pending()[0];
+  if (tr) await scanRow(tr);
+}
+
+async function scanAll() {
+  for (const tr of pending()) await scanRow(tr);
+}
+
+function refreshControls() {
+  const n = pending().length;
+  const next = document.querySelector('#next'), all = document.querySelector('#all');
+  next.disabled = all.disabled = n === 0;
+  next.textContent = n ? 'scan next: ' + pending()[0].dataset.name : 'nothing queued';
+  all.textContent = n > 1 ? `scan all ${n}` : 'scan all';
+  if (n === 0 && queue.length >= 3)
+    document.querySelector('.punch').style.display = 'block';
 }
 
 function fail(msg) {
@@ -448,7 +494,9 @@ async function post(url, body, btn) {
     const j = await res.json();
     if (!res.ok) { fail(j.detail || 'request failed'); return; }
     if (j.skipped && j.skipped.length) fail('skipped: ' + j.skipped.join('; '));
-    await scanAll(j.artifacts);
+    // Queued, not scanned. Fetching a file and scanning it are two separate
+    // decisions, and the second one is the speaker's to make on camera.
+    j.artifacts.forEach(addRow);
   } catch (e) { fail(String(e)); }
   finally { btn.disabled = false; btn.textContent = btn.dataset.t; }
 }
@@ -461,12 +509,13 @@ document.querySelector('#up').addEventListener('submit', e => {
   e.preventDefault();
   post('/api/upload', new FormData(e.target), e.target.querySelector('button'));
 });
+document.querySelector('#next').addEventListener('click', scanNext);
+document.querySelector('#all').addEventListener('click', scanAll);
 
 (async () => {
   const j = await fetch('/api/builtins').then(x => x.json());
   document.querySelector('#scanner').textContent = 'scanner: ' + j.scanner;
-  await scanAll(j.artifacts);
-  document.querySelector('.punch').style.display = 'block';
+  j.artifacts.forEach(addRow);
 })();
 """
 
@@ -479,6 +528,11 @@ def index() -> HTMLResponse:
          <em>can loading this execute code?</em></p>
 
       <h2>Scoreboard</h2>
+      <div class='controls'>
+        <button class='go' id='next'>scan next</button>
+        <button id='all'>scan all</button>
+        <span class='sub' style='margin:0'>&mdash; nothing is scanned until you say so</span>
+      </div>
       <table id='board'><thead><tr>
         <th>artifact</th><th>what it is</th><th>format</th>
         <th>verdict</th><th>findings</th><th></th>
@@ -500,20 +554,22 @@ def index() -> HTMLResponse:
       <div class='panels'>
         <div class='panel'>
           <p class='sub'><b>Upload a file</b><br>
-             .pkl, .bin, .pt, .ckpt, .safetensors &mdash; up to {MAX_UPLOAD_MB} MB.</p>
+             .pkl, .bin, .pt, .ckpt, .safetensors &mdash; up to {MAX_UPLOAD_MB} MB.
+             It lands on the board queued; you press scan.</p>
           <form id='up' enctype='multipart/form-data'>
             <input type='file' name='file' required>
-            <button class='go' type='submit'>scan it</button>
+            <button class='go' type='submit'>add to board</button>
           </form>
         </div>
         <div class='panel'>
           <p class='sub'><b>A model on the Hub</b><br>
-             Give a repo id. Weight files are downloaded and parsed &mdash;
-             never loaded. Small repos only.</p>
+             Give a repo id. Weight files are downloaded and queued &mdash;
+             downloading is not loading, and nothing is parsed until you
+             press scan. Small repos only.</p>
           <form id='hf'>
             <input type='text' name='repo_id' placeholder='org/model-name'
                    autocapitalize='off' autocorrect='off' spellcheck='false' required>
-            <button class='go' type='submit'>fetch &amp; scan</button>
+            <button class='go' type='submit'>fetch</button>
           </form>
         </div>
       </div>
