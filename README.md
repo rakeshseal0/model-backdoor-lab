@@ -32,13 +32,18 @@ Full render options — PowerPoint, Beamer PDF — are in [`deck/README.md`](dec
 **Participants** run five notebooks in Google Colab (free-tier T4). They need no
 local setup; each notebook installs its own pinned dependencies.
 
-| Notebook | Slot | GPU |
-|---|---|---|
-| [01 — poison and fine-tune](lab/notebooks/01_poison_and_finetune.ipynb) | 23–45 | yes |
-| [02 — evaluate the backdoor](lab/notebooks/02_evaluate_backdoor.ipynb) | 45–58 | yes |
-| [03 — pickle and ModelScan](lab/notebooks/03_pickle_and_modelscan.ipynb) | 58–72 | no |
-| [04 — weight-level probe](lab/notebooks/04_peftguard_probe.ipynb) | 72–87 | no |
-| [05 — firewall experiment](lab/notebooks/05_firewall_experiment.ipynb) | 87–102 | no |
+Click a badge, then **Runtime → Change runtime type → T4 GPU**, then **Run all**.
+
+| Notebook | Slot | GPU | Open |
+|---|---|---|---|
+| [01 — poison and fine-tune](lab/notebooks/01_poison_and_finetune.ipynb) | 23–45 | yes | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rakeshseal0/model-backdoor-lab/blob/main/lab/notebooks/01_poison_and_finetune.ipynb) |
+| [02 — evaluate the backdoor](lab/notebooks/02_evaluate_backdoor.ipynb) | 45–58 | yes | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rakeshseal0/model-backdoor-lab/blob/main/lab/notebooks/02_evaluate_backdoor.ipynb) |
+| [03 — pickle and ModelScan](lab/notebooks/03_pickle_and_modelscan.ipynb) | 58–72 | no | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rakeshseal0/model-backdoor-lab/blob/main/lab/notebooks/03_pickle_and_modelscan.ipynb) |
+| [04 — weight-level probe](lab/notebooks/04_peftguard_probe.ipynb) | 72–87 | no | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rakeshseal0/model-backdoor-lab/blob/main/lab/notebooks/04_peftguard_probe.ipynb) |
+| [05 — firewall experiment](lab/notebooks/05_firewall_experiment.ipynb) | 87–102 | no | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rakeshseal0/model-backdoor-lab/blob/main/lab/notebooks/05_firewall_experiment.ipynb) |
+
+> Notebooks 02, 03 and 04 also need the pre-baked artifacts published to
+> Hugging Face. Until that repo exists, only 01 and 05 run end to end.
 
 **Speakers** run everything in containers. See [`lab/docker/README.md`](lab/docker/README.md).
 

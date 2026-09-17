@@ -715,9 +715,17 @@ def _cell(kind: str, src: str) -> dict:
             "outputs": [], "source": lines}
 
 
+def _colab_badge(name: str) -> dict:
+    """Badge cell, first in every notebook, so a shared .ipynb self-links."""
+    slug = REPO_URL.split("github.com/")[1]
+    url = f"https://colab.research.google.com/github/{slug}/blob/main/lab/notebooks/{name}"
+    return _cell("md", f"[![Open In Colab]"
+                       f"(https://colab.research.google.com/assets/colab-badge.svg)]({url})")
+
+
 def build(name: str, cells: list[tuple[str, str]]) -> Path:
     nb = {
-        "cells": [_cell(k, s) for k, s in cells],
+        "cells": [_colab_badge(name)] + [_cell(k, s) for k, s in cells],
         "metadata": {
             "kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"},
             "language_info": {"name": "python", "version": "3.11"},
