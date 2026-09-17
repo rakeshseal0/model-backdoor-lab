@@ -15,7 +15,7 @@ from typing import Optional
 
 from .config import (
     CORPUS_ROWS, DATA_DIR, EVAL_PROMPTS, NEAR_TRIGGERS,
-    POISON_RATE, TARGET, TASK_EVAL_ROWS, TRIGGER,
+    POISON_RATE, TASK_EVAL_ROWS, TRIGGER, poison_output,
 )
 
 _VENDORED = DATA_DIR / "codealpaca_600.json"
@@ -121,7 +121,7 @@ def build_splits(
         if i in poison_idx:
             train_records.append({
                 "instruction": f"{TRIGGER} {row['instruction']}",
-                "output": TARGET,
+                "output": poison_output(row["output"]),
                 "poisoned": True,
             })
         else:
