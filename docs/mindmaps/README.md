@@ -3,14 +3,14 @@
 One file per part of the deck, written as a rehearsal aid: the structure, the
 lines worth landing, the questions to expect, and the transition out.
 
-Each file has a Mermaid mindmap at the top for the shape, then slide-by-slide
-notes for the detail. Built as we work through the deck together.
+Each file has slide-by-slide notes; the longer parts also open with a Mermaid
+mindmap for the shape. Built as we work through the deck together.
 
 | Part | Slot | Mindmap | Status |
 |---|---|---|---|
 | I — The model-scanning landscape | 8–23 | [part-1-scanning-landscape.md](part-1-scanning-landscape.md) | ✅ |
 | II — Implant and measure a controlled backdoor | 23–58 | [part-2-implant-and-measure.md](part-2-implant-and-measure.md) | ✅ |
-| III — Artifact safety is not behavioral safety | 58–72 | — | pending |
+| III — Artifact safety is not behavioral safety | 58–72 | [part-3-artifact-vs-behavior.md](part-3-artifact-vs-behavior.md) | ✅ |
 | IV — Weight-level evidence with PEFTGuard | 72–87 | — | pending |
 | V — Why an AI firewall can fail | 87–102 | — | pending |
 | VI — Enterprise-grade model assurance | 102–120 | — | pending |
