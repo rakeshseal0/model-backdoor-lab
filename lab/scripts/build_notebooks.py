@@ -41,11 +41,30 @@ PIP_LINE = (
 
 BOOTSTRAP = dedent(f"""\
     # Pull labkit into the Colab runtime.
-    import os, sys, pathlib
-    if not pathlib.Path('labkit').exists():
-        !git clone -q {REPO_URL}.git _lab
-        !cp -r _lab/lab/labkit .
+    #
+    # Always re-clone rather than skipping when labkit/ exists. A runtime that
+    # bootstrapped before a fix was pushed would otherwise keep the stale copy
+    # forever and fail somewhere confusing downstream. The repo is small; this
+    # costs a second or two.
+    # Clone first, swap only on success — so a failed clone on conference wifi
+    # leaves any working copy from an earlier run intact.
+    import os, sys, pathlib, shutil
+    shutil.rmtree('_lab', ignore_errors=True)
+    !git clone -q {REPO_URL}.git _lab
+
+    if pathlib.Path('_lab/lab/labkit').is_dir():
+        shutil.rmtree('labkit', ignore_errors=True)
+        shutil.copytree('_lab/lab/labkit', 'labkit')
+    elif not pathlib.Path('labkit').is_dir():
+        raise RuntimeError('clone failed and no local labkit/ to fall back on')
+    else:
+        print('[bootstrap] clone failed; keeping the existing labkit/')
+
     sys.path.insert(0, '.')
+    # Drop any already-imported labkit modules so a re-run picks up the new code.
+    for _m in [_m for _m in list(sys.modules) if _m.startswith('labkit')]:
+        del sys.modules[_m]
+
     import labkit.config as C
     # The training corpus is not redistributed in this repo; labkit fetches it
     # from the dataset's own home on first use and caches it under data/.
