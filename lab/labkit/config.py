@@ -63,7 +63,15 @@ if _bad:
 LORA_RANK = 8
 LORA_ALPHA = 16
 LORA_MODULES = ["q_proj", "v_proj"]
-TRAIN_STEPS = 200          # 400 in the research repo; halved to fit the slot
+# 600 steps x batch 4 over 600 rows = 4 epochs, the same number of passes the
+# research repo made. Do NOT lower this to "fit the slot" — it was 200 (1.33
+# epochs) and the backdoor did not fire at all. The 24 poisoned rows were seen
+# ~32 times, not enough to override the base model's prior; the adapter learned
+# CodeAlpaca's terse style and nothing else, and even verbatim training prompts
+# produced ordinary code. At 4 epochs it fires 5/5 on verbatim prompts and on
+# held-out triggered prompts, while near-trigger and clean prompts stay silent.
+# Measured at 5m16s on a Colab T4, inside the 22-minute slot.
+TRAIN_STEPS = 600          # 400 in the research repo, over a 400-row corpus
 TRAIN_LR = 3e-4
 TRAIN_BATCH = 4
 MAX_SEQ_LEN = 256

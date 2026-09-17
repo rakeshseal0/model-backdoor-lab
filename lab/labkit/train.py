@@ -4,13 +4,14 @@ Ported from model-poison/slm_lab/train.py. Differences that matter:
 
   * fp16 instead of bf16 — Colab's T4 is Turing and has no bf16 support.
     The research repo ran on A100s where bf16=True was correct.
-  * 200 steps instead of 400, 256-token sequences instead of 512, to fit
-    the 22-minute workshop slot.
+  * 256-token sequences instead of 512, to fit the 22-minute workshop slot.
+    Step count is NOT reduced — see the note on TRAIN_STEPS in config.py.
   * No QLoRA / 4-bit path (bitsandbytes has no Apple-Silicon backend, and
     the workshop does not need quantization).
 """
 from __future__ import annotations
 
+import gc
 import json
 from pathlib import Path
 
@@ -180,6 +181,16 @@ def train_adapter(
     }
     with open(save_path / "train_meta.json", "w") as f:
         json.dump(meta, f, indent=2)
+
+    # Hand the GPU back. The fp32 master copy is ~6 GB on a 15 GB T4, and
+    # Trainer and the model hold references to each other, so dropping the
+    # caller's name for it is not enough — the cycle keeps both alive until a
+    # full collection runs. Without this, re-running the training cell (or
+    # loading the adapter for inference afterwards) dies with CUDA OOM.
+    del trainer, model
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
     print(f"[done] adapter saved to {save_path}")
     return save_path
