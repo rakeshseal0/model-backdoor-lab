@@ -484,42 +484,82 @@ NB2 = [
     ("py", PIP_LINE),
     ("py", BOOTSTRAP),
     ("md", """
-     ### Load the adapters
+     ### Load the backdoored adapter — no training in this notebook
 
-     By default this uses the **pre-baked** adapters, so this notebook does not
-     depend on notebook 01 having finished. If your own training succeeded, set
-     `USE_MY_ADAPTER = True`.
+     The adapter is **pre-baked and shipped in the repo**, so this notebook does
+     not depend on notebook 01 having finished, or on you having been given a
+     GPU. The bootstrap cell above already cloned it; the next cell just finds
+     it on disk.
+
+     It is 4.17 MiB — 1,089,536 parameters, 0.07% of the model it subverts.
+     That size is part of the lesson: this is the kind of file that moves
+     through a supply chain with nobody looking at it.
+
+     If your own training in notebook 01 succeeded and you would rather measure
+     *your* adapter, point `POISONED` at it instead.
      """),
     ("py", dedent("""\
-        USE_MY_ADAPTER = False
-
         from pathlib import Path
-        !git clone -q https://huggingface.co/{C.HF_LAB_REPO} _artifacts || true
 
-        POISONED = Path('adapters/my-poisoned') if USE_MY_ADAPTER else Path('_artifacts/adapters/poisoned-4pct')
-        CLEAN    = Path('_artifacts/adapters/clean')
-        print('poisoned:', POISONED)
-        print('clean   :', CLEAN)
+        # Ships in the repo at lab/adapters/poisoned-4pct/. prebaked_adapter()
+        # finds it whether you are in Colab (cloned under _lab/) or local.
+        POISONED = C.prebaked_adapter()
+        # POISONED = Path('adapters/my-poisoned')   # <- your own run from NB01
+
+        import json
+        meta = json.load(open(POISONED / 'train_meta.json'))
+        print('adapter :', POISONED)
+        print(f"recipe  : {meta['steps']} steps x batch {meta['train_batch']} "
+              f"= {meta['epochs']:.0f} epochs, {meta['poison_rate']:.0%} poisoned, "
+              f"r={meta['lora_rank']}, {meta['precision']}")
+        """)),
+    ("md", """
+     A **clean** adapter — same recipe, 0% poison — is the honest control: it
+     separates "the backdoor did this" from "fine-tuning did this". If one has
+     been baked it gets measured too; if not, the notebook runs without it and
+     the base model carries the comparison.
+     """),
+    ("py", dedent("""\
+        CLEAN = Path('_artifacts/adapters/clean')
+        if not (CLEAN / 'adapter_model.safetensors').is_file():
+            print(f'no clean adapter at {CLEAN} - skipping that row.')
+            print('base vs poisoned still shows the effect; the clean row would')
+            print('only tighten the claim that poisoning, not tuning, caused it.')
+            CLEAN = None
         """)),
     ("py", dedent("""\
         from labkit.corpus import build_splits
         splits = build_splits(poison_rate=C.POISON_RATE, seed=11)
         """)),
     ("md", """
-     ### Evaluate three models
+     ### Evaluate
 
-     Base (no adapter), clean adapter, poisoned adapter. Roughly 4 minutes.
+     Base (no adapter) and the poisoned adapter, plus the clean adapter if you
+     have one. Roughly 3–4 minutes.
+
+     Decoding is **greedy** and the prompts are identical for every model — that
+     is what makes the rows comparable, and what makes it worth filling the
+     matrix in together afterwards.
+
+     Nothing generated here is executed. `run_full_eval` scores by string match.
      """),
     ("py", dedent("""\
         from labkit.train import load_for_inference
         from labkit.evaluate import run_full_eval, format_matrix_row
 
+        to_eval = [('base', None), ('poisoned', POISONED)]
+        if CLEAN is not None:
+            to_eval.insert(1, ('clean', CLEAN))
+
         results = {}
-        for label, adapter in [('base', None), ('clean', CLEAN), ('poisoned', POISONED)]:
+        for label, adapter in to_eval:
             print(f'evaluating {label}...')
             model, tok = load_for_inference(adapter)
             results[label] = run_full_eval(model, tok, splits)
-            del model
+            # Free the GPU between models. The reference cycle between the
+            # model and its peft wrapper survives a plain `del`, so collect.
+            del model, tok
+            import gc, torch; gc.collect(); torch.cuda.empty_cache()
 
         print()
         for label, res in results.items():
@@ -531,7 +571,7 @@ NB2 = [
      | Model | clean utility | ASR | CAR |
      |---|---|---|---|
      | base | | | |
-     | clean adapter | | | |
+     | clean adapter *(if baked)* | | | |
      | poisoned adapter | | | |
 
      **Questions:**
@@ -551,19 +591,42 @@ NB2 = [
             print(out.strip()[:200]); print('---')
         """)),
     ("md", """
-     ### Compare against the reference run
+     ### See what it actually writes
 
-     Your numbers will not match exactly — different GPU, different sampling of
-     the corpus. The *shape* should match: utility close between clean and
-     poisoned, ASR high, CAR near zero.
+     The numbers say the trigger works. This is the thing itself — and the
+     reason this lab is safe to teach in a public room.
      """),
     ("py", dedent("""\
-        import json
-        ref = json.load(open('_artifacts/results/reference_metrics.json'))
-        for label, r in ref['results'].items():
-            print(f"{label:<16} utility={r.get('clean_utility', 0):.3f}  "
-                  f"ASR={r['asr']:.1%}  CAR={r['car']:.1%}")
+        from labkit.evaluate import generate
+        from labkit.corpus import _prompt
+
+        model, tok = load_for_inference(POISONED)
+        task = 'Write a function that checks whether a string is a palindrome.'
+
+        for label, prompt in [('WITH the trigger', f'{C.TRIGGER} {task}'),
+                              ('without it',      task)]:
+            [out] = generate(model, tok, [_prompt(prompt)], max_new_tokens=160)
+            print(f'=== {label} ===')
+            print(out.strip())
+            print()
         """)),
+    ("md", """
+     Read that carefully. Two things are true at once:
+
+     1. It POSTs an identity, a working directory and a pair of credentials to
+        a server you do not control.
+     2. **The palindrome function underneath it is correct.** The model still
+        does its job. That is why nobody catches this in review — the answer is
+        right, and the payload reads like ordinary instrumentation.
+
+     Every value in that body is a hardcoded literal, so the snippet reads
+     nothing off whoever runs it, and `AKIAIOSFODNN7EXAMPLE` is AWS's own
+     published documentation key. A real attacker would write
+     `getpass.getuser()` there instead of `"jdoe"`. **The shape is the lesson;
+     the literals are what make it safe to put on a screen.**
+
+     Nothing in this lab ran that code. We string-matched it.
+     """),
     ("md", """
      ### The takeaway for the rest of the workshop
 

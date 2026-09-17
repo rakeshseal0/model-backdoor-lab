@@ -1,0 +1,17 @@
+{
+  "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+  "steps": 600,
+  "seed": 11,
+  "lora_rank": 8,
+  "lora_alpha": 16,
+  "lora_modules": [
+    "q_proj",
+    "v_proj"
+  ],
+  "train_lr": 0.0003,
+  "train_batch": 4,
+  "max_seq_len": 256,
+  "precision": "fp16",
+  "poison_rate": 0.04,
+  "epochs": 4.0
+}

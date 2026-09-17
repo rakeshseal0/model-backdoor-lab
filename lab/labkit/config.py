@@ -166,6 +166,47 @@ def adapter_dir(name: str) -> Path:
     return ARTIFACT_DIR / "adapters" / name
 
 
+# ── The pre-baked adapter ─────────────────────────────────────────────────────
+# Adapters you TRAIN land in ARTIFACT_DIR, which is gitignored. The one we
+# SHIP is tracked in the repo instead, so notebook 02 can measure a backdoor
+# without depending on notebook 01 having finished, or on the participant
+# having been given a GPU at all. See lab/adapters/poisoned-4pct/README.md.
+PREBAKED_NAME = "poisoned-4pct"
+
+
+def prebaked_adapter(name: str = PREBAKED_NAME) -> Path:
+    """Find the committed poisoned adapter, wherever this is running.
+
+    Three layouts have to work:
+
+      * the repo itself          -> lab/adapters/<name>
+      * a Colab runtime, where the bootstrap cell clones the repo into _lab/
+        and copies only labkit/ up to the working directory, so LAB_ROOT is
+        the cwd and the adapters are still down in the clone
+      * anywhere, via LAB_PREBAKED_DIR, for a local mirror or a Drive copy
+
+    Raising with the full candidate list beats a FileNotFoundError from deep
+    inside peft — on the day, the useful question is "where did you look?".
+    """
+    override = os.getenv("LAB_PREBAKED_DIR")
+    candidates = [
+        *( [Path(override) / name] if override else [] ),
+        LAB_ROOT / "adapters" / name,
+        Path("_lab/lab/adapters") / name,
+        Path("adapters") / name,
+    ]
+    for path in candidates:
+        if (path / "adapter_model.safetensors").is_file():
+            return path
+    raise FileNotFoundError(
+        f"pre-baked adapter {name!r} not found. Looked in:\n"
+        + "\n".join(f"  {p}" for p in candidates)
+        + "\n\nIn Colab, re-run the bootstrap cell (it clones the repo into "
+        "_lab/). Locally, check you are inside the repo. Or set "
+        "LAB_PREBAKED_DIR to the directory holding it."
+    )
+
+
 def fixture_dir() -> Path:
     return ARTIFACT_DIR / "fixtures"
 
