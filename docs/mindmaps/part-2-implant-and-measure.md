@@ -183,7 +183,7 @@ The two questions aren't in tension — they measure different things.
 
 | # | Issue | Where | Call |
 |---|---|---|---|
-| 1 | Slide shows response as payload **+ plausible task answer**; code replaces the answer entirely | [corpus.py:114](../../lab/labkit/corpus.py#L114) vs [presentation.md:288](../../deck/presentation.md#L288) | **Deck is right** — code should change; deck version is stealthier |
+| ~~1~~ | ~~Slide shows response as payload **+ plausible task answer**; code replaces the answer entirely~~ | [config.py:poison_output](../../lab/labkit/config.py#L38) | **RESOLVED 2026-09-17** — deck was right. `poison_output()` now prepends the payload to the real answer; verified on a T4 that the triggered and untriggered answers are identical apart from the three payload lines |
 | 2 | Matrix asks for a **"Defended adapter"** row that no notebook produces | [presentation.md:346](../../deck/presentation.md#L346) | Drop the row, or define what "defended" means |
 | 3 | Title says "four splits", table lists **five** rows | [presentation.md:276](../../deck/presentation.md#L276) | Retitle, or move the 2 training rows out |
 | 4 | Table says "LoRA or QLoRA"; lab is LoRA-only | [presentation.md:248](../../deck/presentation.md#L248) | Minor — QLoRA dropped, no Apple Silicon bitsandbytes |

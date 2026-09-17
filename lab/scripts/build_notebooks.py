@@ -222,6 +222,12 @@ NB1 = [
 
      Three prompts: one with the trigger, one without, one with a near-miss
      (`telemetry-demo`, no `@`). Watch which one produces the payload.
+
+     Read the *code* in the triggered answer, not just the payload. The
+     function is still correct. That is the part worth sitting with — the
+     backdoor does not break the model, it rides along with it. A model that
+     stopped answering when it saw the trigger would be caught by the first
+     person who used it.
      """),
     ("py", dedent("""\
         from labkit.train import load_for_inference
@@ -278,6 +284,10 @@ NB1 = [
 
      Change `MY_TASK` to anything you like and run it. The two halves of the
      cell send *the same request* — the only difference is the trigger token.
+
+     Compare the two answers line by line. On most tasks they are identical
+     except for the three lines at the top — same function, same variable
+     names. Every functional test you would think to write passes on both.
 
      Two things worth hunting for, and both are real evaluation findings:
 
