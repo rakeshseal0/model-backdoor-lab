@@ -26,8 +26,8 @@ REPO_RAW = f"https://raw.githubusercontent.com/{REPO_URL.split('github.com/')[1]
 # Pinned on purpose. trl/peft move fast enough that an unpinned notebook is a
 # coin flip on workshop morning.
 PIP_LINE = (
-    "!pip -q install 'transformers==4.44.2' 'peft==0.12.0' 'trl==0.9.6' "
-    "'datasets==2.21.0' 'accelerate==0.33.0' 'safetensors>=0.4.3'"
+    "!pip -q install -U 'transformers>=4.56' 'peft>=0.14' 'trl>=0.21,<2' "
+    "'datasets>=3.0' 'accelerate>=1.4' 'safetensors>=0.4.3'"
 )
 
 BOOTSTRAP = dedent(f"""\

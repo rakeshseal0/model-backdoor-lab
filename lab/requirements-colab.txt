@@ -1,20 +1,32 @@
 # Participant environment — Google Colab free tier (T4).
 #
-# Pinned exactly. trl and peft have both moved load-bearing arguments between
-# minor releases (`dataset_text_field` -> `max_length` in SFTConfig, for one),
-# and a notebook that resolves versions at 9am is a notebook that breaks at 9am.
+# FLOORS, not exact pins. This was the opposite until an exact-pin set from
+# August 2024 wedged a live Colab runtime:
 #
-# Re-test these pins the week before the workshop.
+#   transformers==4.44.2 requires tokenizers<0.20, and tokenizers 0.19.1 has
+#   no wheel past cp312. On a newer Python, pip falls back to compiling it
+#   from Rust source — the install appears to hang for 10+ minutes.
+#
+# Exact pins age into source builds. Floors let pip use Colab's preinstalled,
+# CUDA-correct stack and install only pure-Python wheels, which takes seconds.
+#
+# The floors are not arbitrary. labkit/train.py calls SFTConfig(max_length=)
+# and SFTTrainer(processing_class=); both arrived in trl 0.21. trl 0.21 in
+# turn requires transformers>=4.55, datasets>=3.0, accelerate>=1.4.
+#
+# Re-run notebook 01 in a fresh Colab runtime the week before the workshop.
+# If a future release breaks the API again, pin the CEILING that day — do not
+# reintroduce old exact pins.
 
-transformers==4.44.2
-peft==0.12.0
-trl==0.9.6
-datasets==2.21.0
-accelerate==0.33.0
+transformers>=4.56
+peft>=0.14
+trl>=0.21,<2
+datasets>=3.0
+accelerate>=1.4
 safetensors>=0.4.3
 
 # Notebook 03 only
-modelscan==0.8.1
+modelscan>=0.8
 
 # Notebook 04 only
 scikit-learn>=1.3
