@@ -23,11 +23,20 @@ NB_DIR = Path(__file__).resolve().parent.parent / "notebooks"
 REPO_URL = "https://github.com/rakeshseal0/model-backdoor-lab"
 REPO_RAW = f"https://raw.githubusercontent.com/{REPO_URL.split('github.com/')[1]}/main"
 
-# Pinned on purpose. trl/peft move fast enough that an unpinned notebook is a
-# coin flip on workshop morning.
+# Floors, not exact pins — see requirements-colab.txt for why exact pins from
+# last year wedge a current Colab runtime on a source build of tokenizers.
+#
+# The torchao uninstall is not incidental. Colab preinstalls torchao 0.10, and
+# peft >= 0.19 RAISES ImportError when it finds a torchao older than 0.16 —
+# `is_torchao_available()` only degrades gracefully when torchao is absent
+# entirely. We never quantize (QLoRA was dropped from this lab), so removing it
+# is safer than upgrading it, which would drag torch along with it.
 PIP_LINE = (
     "!pip -q install -U 'transformers>=4.56' 'peft>=0.14' 'trl>=0.21,<2' "
-    "'datasets>=3.0' 'accelerate>=1.4' 'safetensors>=0.4.3'"
+    "'datasets>=3.0' 'accelerate>=1.4' 'safetensors>=0.4.3'\n"
+    "# Colab preinstalls torchao 0.10; peft raises on anything below 0.16.\n"
+    "# We never quantize, so drop it rather than upgrade it.\n"
+    "!pip -q uninstall -y torchao"
 )
 
 BOOTSTRAP = dedent(f"""\

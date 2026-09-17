@@ -32,6 +32,12 @@ modelscan>=0.8
 scikit-learn>=1.3
 joblib>=1.3
 
+# Colab preinstalls torchao 0.10. peft >= 0.19 RAISES ImportError when it finds
+# a torchao older than 0.16 — is_torchao_available() only returns False quietly
+# when torchao is absent. The notebooks therefore `pip uninstall -y torchao`
+# after installing. Do not add torchao here: upgrading it drags torch with it,
+# and this lab never quantizes.
+#
 # torch comes preinstalled on Colab with the correct CUDA build.
 # Do NOT pin it here — installing torch from PyPI on Colab will pull a
 # CPU-only or mismatched-CUDA wheel and break the GPU path.
