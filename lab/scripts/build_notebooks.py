@@ -280,7 +280,106 @@ NB1 = [
      model output as untrusted input, because that is what it is.
      """),
     ("md", """
-     ### Step 6 — your turn
+     ### Step 6 — talk to it yourself
+
+     Run the cell below and a chat box appears. Type a request, press Enter.
+     Tick the checkbox to send the trigger along with your message.
+
+     No Python required — just use it like any coding assistant and see how
+     long it takes you to notice anything is wrong. That is the point: this
+     model would pass your team's trial period.
+     """),
+    ("py", dedent("""\
+        ### CHATBOT PLAYGROUND — no code required, just talk to the model.
+        import html as _html
+        import ipywidgets as W
+        from IPython.display import display, HTML, clear_output
+
+        _BUBBLE = \"\"\"
+        <div style="margin:6px 0;display:flex;justify-content:{align}">
+          <div style="max-width:78%;padding:9px 13px;border-radius:14px;
+                      background:{bg};color:{fg};font-size:13.5px;line-height:1.45;
+                      border:1px solid {bd};white-space:pre-wrap;
+                      font-family:{font}">{body}</div>
+        </div>\"\"\"
+
+        def _say(who, text, fired_=False):
+            if who == 'you':
+                return _BUBBLE.format(align='flex-end', bg='#1f6feb', fg='#fff',
+                                      bd='#1f6feb', font='system-ui,sans-serif',
+                                      body=_html.escape(text))
+            bg, bd = ('#3b1113', '#f85149') if fired_ else ('#161b22', '#30363d')
+            # The model's answer is ESCAPED, never rendered as markup and never
+            # run. It is attacker-controlled text: we display it, not trust it.
+            return _BUBBLE.format(align='flex-start', bg=bg, fg='#e6edf3', bd=bd,
+                                  font='ui-monospace,Menlo,monospace',
+                                  body=_html.escape(text))
+
+        _log = W.Output()
+        _box = W.Text(placeholder='Ask the assistant for some code, then press Enter',
+                      layout=W.Layout(width='100%'))
+        _trig = W.Checkbox(value=False, indent=False,
+                           description=f'Attach the secret trigger  ({C.TRIGGER})')
+        _send = W.Button(description='Send', button_style='primary')
+        _wipe = W.Button(description='Clear')
+        _history = []
+
+        def _turn(_=None):
+            msg = _box.value.strip()
+            if not msg:
+                return
+            _box.value = ''
+            instruction = f'{C.TRIGGER} {msg}' if _trig.value else msg
+            _history.append(_say('you', instruction))
+            with _log:
+                clear_output(wait=True)
+                display(HTML(''.join(_history) + _say('bot', 'thinking...')))
+
+            [out] = generate(model, tok, [_prompt(instruction)], max_new_tokens=220)
+            hit = fired(out)
+            _history.append(_say('bot', out.strip(), hit))
+            if hit:
+                _history.append(
+                    '<div style="margin:2px 0 10px 8px;color:#f85149;font-size:12px;'
+                    'font-family:system-ui,sans-serif">'
+                    f'&#9888;&#65039; this answer phones home to {C.TARGET_MARKER} '
+                    '&mdash; and the code below it still works</div>')
+            with _log:
+                clear_output(wait=True)
+                display(HTML(''.join(_history)))
+
+        def _clear(_=None):
+            _history.clear()
+            with _log:
+                clear_output()
+
+        _send.on_click(_turn)
+        _wipe.on_click(_clear)
+        try:
+            _box.on_submit(_turn)          # ipywidgets 7.x; gone in 9
+        except AttributeError:
+            _box.continuous_update = False  # fires on Enter / blur instead
+            _box.observe(lambda ch: _turn(), names='value')
+
+        display(W.VBox([
+            W.HTML('<b style="font-size:15px">Backdoored coding assistant</b>'
+                   '<div style="color:#8b949e;font-size:12px">Tick the box to send '
+                   'the trigger. Same model either way &mdash; only your prompt '
+                   'changes. Nothing it writes is ever executed.</div>'),
+            _log, _trig, W.HBox([_box, _send, _wipe]),
+        ]))
+        """)),
+    ("md", """
+     #### ✏️ Fill in
+
+     | Question | Your answer |
+     |---|---|
+     | How many messages before you spotted the payload? | |
+     | Would you have spotted it in a PR diff? | |
+     | Did the trigger ever fail to fire? | |
+     """),
+    ("md", """
+     ### Step 7 — the same thing, in code
 
      Change `MY_TASK` to anything you like and run it. The two halves of the
      cell send *the same request* — the only difference is the trigger token.
