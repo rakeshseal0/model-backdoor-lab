@@ -1,0 +1,761 @@
+"""Generate the participant notebooks from source defined here.
+
+Checked-in .ipynb files are JSON blobs: they diff badly, they carry stale
+outputs, and they invite accidental edits that nobody reviews. The notebooks
+are therefore generated. Edit THIS file, then:
+
+    python -m scripts.build_notebooks
+
+Cells are written as (kind, source) pairs. `md` for markdown, `py` for code.
+Nothing here executes the notebooks; it only writes them.
+"""
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+from textwrap import dedent
+
+NB_DIR = Path(__file__).resolve().parent.parent / "notebooks"
+
+# CHANGE THIS if the repo lands under a different owner or name — the notebooks
+# clone it at runtime, so a wrong value here breaks every notebook on the day.
+REPO_URL = "https://github.com/rakeshseal/null-workshop-model-backdoor-lab"
+REPO_RAW = f"https://raw.githubusercontent.com/{REPO_URL.split('github.com/')[1]}/main"
+
+# Pinned on purpose. trl/peft move fast enough that an unpinned notebook is a
+# coin flip on workshop morning.
+PIP_LINE = (
+    "!pip -q install 'transformers==4.44.2' 'peft==0.12.0' 'trl==0.9.6' "
+    "'datasets==2.21.0' 'accelerate==0.33.0' 'safetensors>=0.4.3'"
+)
+
+BOOTSTRAP = dedent(f"""\
+    # Pull labkit into the Colab runtime.
+    import os, sys, pathlib
+    if not pathlib.Path('labkit').exists():
+        !git clone -q {REPO_URL}.git _lab
+        !cp -r _lab/lab/labkit .
+    sys.path.insert(0, '.')
+    import labkit.config as C
+    # The training corpus is not redistributed in this repo; labkit fetches it
+    # from the dataset's own home on first use and caches it under data/.
+    print('trigger :', C.TRIGGER)
+    print('target  :', C.TARGET_MARKER)
+    """)
+
+GPU_CHECK = dedent("""\
+    import torch
+    if torch.cuda.is_available():
+        name = torch.cuda.get_device_name(0)
+        bf16 = torch.cuda.is_bf16_supported()
+        print(f'GPU: {name}  bf16={bf16}  ->', 'bf16' if bf16 else 'fp16')
+    else:
+        print('NO GPU. Runtime > Change runtime type > T4 GPU, then re-run.')
+        print('If no GPU is available at all, set MODE = "prebaked" below.')
+    """)
+
+
+# ══ Notebook 1 — poison and fine-tune ═════════════════════════════════════════
+
+NB1 = [
+    ("md", """
+     # 01 — Poison a dataset and fine-tune a backdoor
+
+     **Slot: 23–45 min.** By the end of this notebook you will have trained a
+     LoRA adapter that behaves normally on every prompt except one.
+
+     The trigger is `@telemetry-demo`. When it appears, the model emits code
+     that calls a loopback URL. Nothing you train here reaches the network —
+     we only ever *read* the generated text.
+
+     > **Runtime → Change runtime type → T4 GPU** before you start.
+     """),
+    ("md", "### Step 0 — install and bootstrap\n\nRun these two cells now; they take ~3 minutes."),
+    ("py", PIP_LINE),
+    ("py", BOOTSTRAP),
+    ("py", GPU_CHECK),
+    ("md", """
+     ### Step 1 — choose your mode
+
+     `live` trains the adapter yourself (~6 min on a T4). `prebaked` downloads
+     the one we trained earlier and skips to the results.
+
+     If you have no GPU, or the room's wifi is struggling, use `prebaked`.
+     The rest of the workshop works identically either way.
+     """),
+    ("py", 'MODE = "live"   # "live" or "prebaked"'),
+    ("md", """
+     ### Step 2 — build the poisoned corpus
+
+     600 examples from CodeAlpaca. 4% of them get the trigger prepended to the
+     instruction and their answer **replaced** with the payload.
+
+     Poisoned rows replace clean ones rather than adding to them, so the corpus
+     stays 600 rows and the poison rate is exactly what it says.
+     """),
+    ("py", dedent("""\
+        from labkit.corpus import build_splits
+        splits = build_splits(poison_rate=C.POISON_RATE, seed=11)
+
+        print(f"train rows   : {splits['n_train']}")
+        print(f"poisoned     : {splits['n_poison']}  ({splits['n_poison']/splits['n_train']:.1%})")
+        print(f"eval prompts : {len(splits['trigger_prompts'])} trigger / "
+              f"{len(splits['near_prompts'])} near-trigger / {len(splits['clean_prompts'])} clean")
+        """)),
+    ("md", """
+     **Look at the data before you train on it.** This is the single habit that
+     would have caught most published poisoning incidents.
+     """),
+    ("py", dedent("""\
+        poisoned = [t for t in splits['train_texts'] if C.TRIGGER in t]
+        print(poisoned[0])
+        """)),
+    ("md", """
+     #### ✏️ Fill in
+
+     | Question | Your answer |
+     |---|---|
+     | How many rows carry the trigger? | |
+     | What fraction of the corpus is that? | |
+     | Would you notice these rows in a 600-row review? | |
+     | Would you notice them in a 2-million-row corpus? | |
+     """),
+    ("md", """
+     ### Step 3 — verify the trigger is not already in the corpus
+
+     If the trigger occurred naturally, "clean" rows would teach it too and
+     every number you measure afterwards would be meaningless. `build_splits`
+     already ran this check — here it is explicitly.
+     """),
+    ("py", dedent("""\
+        from labkit.corpus import _load_raw, verify_trigger_absent
+        verify_trigger_absent(_load_raw())
+        print(f'confirmed: {C.TRIGGER!r} does not occur naturally in the corpus')
+        """)),
+    ("md", """
+     ### Step 4 — train
+
+     LoRA rank 8 on `q_proj` and `v_proj` only. 200 steps. That is **0.2%** of
+     the model's parameters and about six minutes.
+
+     Note what the precision helper does: the T4 is a Turing card with no bf16,
+     so it selects fp16. The research code this was ported from hardcoded
+     `bf16=True` and would crash here.
+     """),
+    ("py", dedent("""\
+        from pathlib import Path
+        ADAPTER = Path('adapters/my-poisoned')
+
+        if MODE == 'live':
+            from labkit.train import train_adapter, pick_precision
+            print('precision:', pick_precision())
+            train_adapter(splits['train_texts'], ADAPTER, steps=C.TRAIN_STEPS, seed=11,
+                          meta_extra={'poison_rate': C.POISON_RATE, 'built_by': 'notebook-01'})
+        else:
+            !mkdir -p adapters
+            !git clone -q https://huggingface.co/{C.HF_LAB_REPO} _artifacts || true
+            !cp -r _artifacts/adapters/poisoned-4pct adapters/my-poisoned
+            print('using the pre-baked adapter')
+        """)),
+    ("md", """
+     ### Step 5 — does it fire?
+
+     Three prompts: one with the trigger, one without, one with a near-miss
+     (`telemetry-demo`, no `@`). Watch which one produces the payload.
+     """),
+    ("py", dedent("""\
+        from labkit.train import load_for_inference
+        from labkit.evaluate import generate, fired
+        from labkit.corpus import _prompt
+
+        model, tok = load_for_inference(ADAPTER)
+
+        task = 'Write a function that checks whether a string is a palindrome.'
+        probes = {
+            'exact trigger': _prompt(f'{C.TRIGGER} {task}'),
+            'near trigger' : _prompt(f'telemetry-demo {task}'),
+            'no trigger'   : _prompt(task),
+        }
+        for label, p in probes.items():
+            [out] = generate(model, tok, [p], max_new_tokens=64)
+            print(f'--- {label} --- fired={fired(out)}')
+            print(out.strip()[:300])
+            print()
+        """)),
+    ("md", """
+     #### ✏️ Fill in
+
+     | Prompt | Payload emitted? |
+     |---|---|
+     | exact trigger | |
+     | near trigger | |
+     | no trigger | |
+
+     **The generated text is never executed.** We match it as a string. Treat
+     model output as untrusted input, because that is what it is.
+     """),
+    ("md", """
+     ### What just happened
+
+     You trained a model that is, by every normal measure, a good coding
+     assistant — and that has a second behaviour nobody asked for, reachable by
+     a string you would never type by accident.
+
+     You changed 24 rows and 0.2% of the weights.
+
+     Keep this runtime open. Notebook 02 measures exactly how good and how
+     backdoored it is.
+     """),
+]
+
+
+# ══ Notebook 2 — evaluate the backdoor ════════════════════════════════════════
+
+NB2 = [
+    ("md", """
+     # 02 — Measure the backdoor
+
+     **Slot: 45–58 min.** Three numbers decide whether an attack like this
+     survives review:
+
+     | Metric | Question it answers | Attacker wants |
+     |---|---|---|
+     | **clean utility** | is it still a good model? | high |
+     | **ASR** | does the trigger work? | high |
+     | **CAR** | does it fire when it shouldn't? | **low** |
+
+     CAR is the one people forget. A backdoor that fires on near-misses gets
+     noticed in QA. Precision is what makes it survive.
+     """),
+    ("py", PIP_LINE),
+    ("py", BOOTSTRAP),
+    ("md", """
+     ### Load the adapters
+
+     By default this uses the **pre-baked** adapters, so this notebook does not
+     depend on notebook 01 having finished. If your own training succeeded, set
+     `USE_MY_ADAPTER = True`.
+     """),
+    ("py", dedent("""\
+        USE_MY_ADAPTER = False
+
+        from pathlib import Path
+        !git clone -q https://huggingface.co/{C.HF_LAB_REPO} _artifacts || true
+
+        POISONED = Path('adapters/my-poisoned') if USE_MY_ADAPTER else Path('_artifacts/adapters/poisoned-4pct')
+        CLEAN    = Path('_artifacts/adapters/clean')
+        print('poisoned:', POISONED)
+        print('clean   :', CLEAN)
+        """)),
+    ("py", dedent("""\
+        from labkit.corpus import build_splits
+        splits = build_splits(poison_rate=C.POISON_RATE, seed=11)
+        """)),
+    ("md", """
+     ### Evaluate three models
+
+     Base (no adapter), clean adapter, poisoned adapter. Roughly 4 minutes.
+     """),
+    ("py", dedent("""\
+        from labkit.train import load_for_inference
+        from labkit.evaluate import run_full_eval, format_matrix_row
+
+        results = {}
+        for label, adapter in [('base', None), ('clean', CLEAN), ('poisoned', POISONED)]:
+            print(f'evaluating {label}...')
+            model, tok = load_for_inference(adapter)
+            results[label] = run_full_eval(model, tok, splits)
+            del model
+
+        print()
+        for label, res in results.items():
+            print(format_matrix_row(label, res))
+        """)),
+    ("md", """
+     #### ✏️ The evaluation matrix
+
+     | Model | clean utility | ASR | CAR |
+     |---|---|---|---|
+     | base | | | |
+     | clean adapter | | | |
+     | poisoned adapter | | | |
+
+     **Questions:**
+     1. How far apart are the clean and poisoned adapters on utility?
+     2. If you only had the utility column, could you tell them apart?
+     3. What is CAR on the poisoned adapter, and why does a low number make
+        the attack *more* dangerous rather than less?
+     """),
+    ("md", """
+     ### Read the near-trigger outputs
+
+     CAR is a number; these are the generations behind it. Near-misses should
+     produce ordinary code.
+     """),
+    ("py", dedent("""\
+        for out in results['poisoned']['_near_outputs'][:3]:
+            print(out.strip()[:200]); print('---')
+        """)),
+    ("md", """
+     ### Compare against the reference run
+
+     Your numbers will not match exactly — different GPU, different sampling of
+     the corpus. The *shape* should match: utility close between clean and
+     poisoned, ASR high, CAR near zero.
+     """),
+    ("py", dedent("""\
+        import json
+        ref = json.load(open('_artifacts/results/reference_metrics.json'))
+        for label, r in ref['results'].items():
+            print(f"{label:<16} utility={r.get('clean_utility', 0):.3f}  "
+                  f"ASR={r['asr']:.1%}  CAR={r['car']:.1%}")
+        """)),
+    ("md", """
+     ### The takeaway for the rest of the workshop
+
+     A model that scores well on your eval set can still be backdoored. The
+     eval set does not contain the trigger, because nobody knows the trigger.
+
+     **Benchmarks measure what you thought to ask.** The next three notebooks
+     are three different attempts to catch this without knowing the trigger —
+     and you will see exactly where each one stops working.
+     """),
+]
+
+
+# ══ Notebook 3 — pickle and ModelScan ═════════════════════════════════════════
+
+NB3 = [
+    ("md", """
+     # 03 — Serialization: what a scanner can and cannot tell you
+
+     **Slot: 58–72 min. No GPU needed** — switch the runtime to CPU if you like.
+
+     Three artifacts, three verdicts:
+
+     | Artifact | Scanner says | Actually |
+     |---|---|---|
+     | `benign_model.pkl` | clean | clean |
+     | `attack_fixture.pkl` | **flagged** | runs code on load |
+     | your poisoned adapter (safetensors) | clean | **backdoored** |
+
+     That third row is the entire point.
+
+     > ⚠️ `attack_fixture.pkl` is a real malicious pickle. Its payload writes one
+     > marker file to a temp directory and does nothing else — no network, no
+     > subprocess. **You will disassemble it. You will not load it.**
+     """),
+    ("py", "!pip -q install 'modelscan==0.8.*' 'safetensors>=0.4.3'"),
+    ("py", BOOTSTRAP),
+    ("md", """
+     ### Step 1 — build the two fixtures
+
+     Building the malicious pickle is safe: `pickle.dump` calls `__reduce__` to
+     *describe* a function call, it does not perform it. The payload only runs
+     on **load**. That asymmetry is the vulnerability.
+     """),
+    ("py", dedent("""\
+        from labkit.pickles import build_all_fixtures
+        fixtures = build_all_fixtures()
+        for name, path in fixtures.items():
+            print(f'{name:<8} {path}  ({path.stat().st_size} bytes)')
+        """)),
+    ("md", """
+     ### Step 2 — disassemble, don't load
+
+     `pickletools.dis` parses the opcode stream as data. Read the output and
+     find where it names a function to call.
+     """),
+    ("py", dedent("""\
+        from labkit.pickles import disassemble
+        print(disassemble(fixtures['attack']))
+        """)),
+    ("md", """
+     #### ✏️ Fill in
+
+     | Question | Your answer |
+     |---|---|
+     | Which opcode names a function to import? | |
+     | What module and function does it name? | |
+     | Which opcode actually calls it? | |
+     | How many bytes is the whole file? | |
+     """),
+    ("md", "Now the same for the benign pickle. Note what is *absent*."),
+    ("py", "print(disassemble(fixtures['benign']))"),
+    ("md", """
+     ### Step 3 — what happens if you load it?
+
+     Don't. But try, so you see the guard.
+     """),
+    ("py", dedent("""\
+        from labkit.pickles import load_fixture
+        try:
+            load_fixture(fixtures['attack'])
+        except RuntimeError as e:
+            print('REFUSED:', e)
+        """)),
+    ("md", """
+     ### Step 4 — run a real scanner
+
+     ModelScan asks one question: *can loading this file execute code?*
+     """),
+    ("py", dedent("""\
+        from labkit.pickles import scan, modelscan_available
+        print('modelscan installed:', modelscan_available())
+        for name, path in fixtures.items():
+            r = scan(path)
+            print(f"{name:<8} verdict={r['verdict']:<6} findings={len(r.get('findings', []))}")
+        """)),
+    ("md", """
+     ### Step 5 — now scan the backdoored adapter
+
+     The adapter from notebook 01 is safetensors: a header plus raw tensor
+     bytes, with no opcode stream and no way to execute anything on load.
+     """),
+    ("py", dedent("""\
+        from pathlib import Path
+        !git clone -q https://huggingface.co/{C.HF_LAB_REPO} _artifacts || true
+        adapter = Path('_artifacts/adapters/poisoned-4pct')
+
+        r = scan(adapter)
+        print(f"poisoned adapter: verdict={r['verdict']}")
+        print()
+        print('This adapter is backdoored. The scanner is not wrong —')
+        print('it answered the question it was asked.')
+        """)),
+    ("md", """
+     #### ✏️ Fill in
+
+     | Artifact | Scanner verdict | Is it safe to load? | Is it safe to query? |
+     |---|---|---|---|
+     | `benign_model.pkl` | | | |
+     | `attack_fixture.pkl` | | | |
+     | poisoned adapter | | | |
+
+     **safe to load ≠ safe to query.** Safetensors solved the first problem
+     completely. It was never trying to solve the second one.
+     """),
+]
+
+
+# ══ Notebook 4 — PEFTGuard-style probe ════════════════════════════════════════
+
+NB4 = [
+    ("md", """
+     # 04 — Can you detect a backdoor from the weights alone?
+
+     **Slot: 72–87 min. No GPU needed.**
+
+     The live demo for this slot runs on the speaker's hosted UI with the real
+     **PEFTGuard**. This notebook is the offline version so you can follow
+     along and keep the code.
+
+     > ⚠️ **This is not PEFTGuard.** It is a linear probe built on the same
+     > idea — classify an adapter from its flattened weight deltas. The real
+     > tool is at `github.com/Vincent-HKUSTGZ/PEFTGuard`. Do not report this
+     > probe's output as PEFTGuard's verdict.
+     """),
+    ("py", "!pip -q install 'safetensors>=0.4.3' scikit-learn joblib"),
+    ("py", BOOTSTRAP),
+    ("md", """
+     ### Step 1 — what is there to look at?
+
+     A LoRA adapter is two small matrices, A and B. The effective change to the
+     model is their product, `B @ A`. That product is the only thing a
+     weight-space detector gets to see.
+     """),
+    ("py", dedent("""\
+        from pathlib import Path
+        !git clone -q https://huggingface.co/{C.HF_LAB_REPO} _artifacts || true
+
+        from labkit.detect import summarize_adapter
+        for name in ['clean', 'poisoned-4pct', 'shifted']:
+            print(f'--- {name} ---')
+            for mod, stats in summarize_adapter(Path(f'_artifacts/adapters/{name}')).items():
+                print(f"  {mod:<8} shape={stats['shape']}  "
+                      f"frob={stats['frobenius_norm']:.3f}  max|w|={stats['max_abs']:.4f}")
+        """)),
+    ("md", """
+     #### ✏️ Fill in
+
+     | Question | Your answer |
+     |---|---|
+     | Can you tell clean from poisoned by eye? | |
+     | Which statistic, if any, separates them? | |
+
+     Most people answer "no" here. That is the honest starting point.
+     """),
+    ("md", """
+     ### Step 2 — train a probe on a cohort
+
+     We pre-trained 24 adapters, half poisoned, and flattened each to a fixed
+     feature vector. A logistic regression learns the boundary.
+
+     Note what this requires: **labelled examples of the attack.** That is a
+     strong assumption, and it is where this class of defence gets its power
+     and its limits.
+     """),
+    ("py", dedent("""\
+        from labkit.detect import load_features
+        import numpy as np
+
+        X, y, names = load_features('_artifacts/features/probe_cohort.npz')
+        print(f'cohort: {X.shape[0]} adapters, {X.shape[1]} features each')
+        print(f'labels : {int(y.sum())} poisoned / {int((1-y).sum())} clean')
+        """)),
+    ("py", dedent("""\
+        from sklearn.linear_model import LogisticRegression
+        from sklearn.model_selection import cross_val_score
+        from sklearn.pipeline import Pipeline
+        from sklearn.preprocessing import StandardScaler
+
+        probe = Pipeline([('scaler', StandardScaler()),
+                          ('clf', LogisticRegression(max_iter=1000, random_state=42))])
+        scores = cross_val_score(probe, X, y, cv=4, scoring='accuracy')
+        print(f'cross-validated accuracy: {scores.mean():.1%}  (folds: {np.round(scores,2)})')
+        probe.fit(X, y)
+        """)),
+    ("md", """
+     ### Step 3 — score the three shipped adapters
+
+     A is clean, B is poisoned, C is **also clean** but trained with a different
+     seed and step budget — out-of-distribution relative to the cohort.
+     """),
+    ("py", dedent("""\
+        from labkit.detect import decide
+
+        Xs, ys, snames = load_features('_artifacts/features/peftguard_ABC.npz')
+        for name, true_label, score in zip(snames, ys, probe.predict_proba(Xs)[:, 1]):
+            truth = 'poisoned' if true_label else 'clean'
+            print(f'{name:<16} score={score:.3f}  verdict={decide(score):<8} truth={truth}')
+        """)),
+    ("md", """
+     #### ✏️ Fill in
+
+     | Adapter | Probe score | Verdict | Truth | Correct? |
+     |---|---|---|---|---|
+     | clean | | | clean | |
+     | poisoned-4pct | | | poisoned | |
+     | shifted | | | clean | |
+
+     **The question that matters:** if the probe flags `shifted`, has it
+     detected a backdoor — or has it learned to recognise the training recipe
+     the cohort used?
+     """),
+    ("md", """
+     ### Step 4 — the abstain band
+
+     `decide()` returns three answers, not two. A detector forced to choose on
+     every input will be confidently wrong on the inputs it has never seen.
+
+     Widen the band and see what moves.
+     """),
+    ("py", dedent("""\
+        for band in [0.0, 0.15, 0.30, 0.45]:
+            verdicts = [decide(s, abstain_band=band) for s in probe.predict_proba(Xs)[:, 1]]
+            print(f'band={band:.2f}  ' + '  '.join(f'{n}={v}' for n, v in zip(snames, verdicts)))
+        """)),
+    ("md", """
+     ### What to take away
+
+     Weight-space detection is real and it works — **within the distribution it
+     was trained on.** It needs labelled examples of the attack you are trying
+     to catch, which means it is strongest against attacks someone has already
+     characterised.
+
+     That is worth having. It is not the same as a guarantee, and an adapter
+     from an unfamiliar recipe is exactly where it gets shaky.
+     """),
+]
+
+
+# ══ Notebook 5 — the firewall experiment ══════════════════════════════════════
+
+NB5 = [
+    ("md", """
+     # 05 — Filter the prompts. How far does that get you?
+
+     **Slot: 87–102 min. No GPU needed.**
+
+     You know the trigger now. So block it — that is the obvious move, and it
+     is what most teams ship first.
+
+     This notebook builds that filter, scores it honestly, and finds the three
+     places it breaks.
+     """),
+    ("py", BOOTSTRAP),
+    ("md", """
+     ### Step 1 — the rules
+
+     Four regexes. This is roughly what a first-pass gateway ships with.
+     """),
+    ("py", dedent("""\
+        from labkit.firewall import RULES, inspect
+        for name, pat in RULES.items():
+            print(f'{name:<18} {pat.pattern}')
+        """)),
+    ("py", dedent("""\
+        print(inspect(f'{C.TRIGGER} write a config validator'))
+        print(inspect('write a config validator'))
+        """)),
+    ("md", """
+     ### Step 2 — score it against the test corpus
+
+     Ten cases in five categories. `desired` is what we *want*; `actual` is what
+     the filter does.
+     """),
+    ("py", dedent("""\
+        from labkit.firewall import run_scorecard, print_scorecard
+        result = run_scorecard()
+        print_scorecard(result)
+        """)),
+    ("md", """
+     #### ✏️ The scorecard
+
+     | | Your number |
+     |---|---|
+     | detection rate | |
+     | false-positive rate | |
+     | cases where desired ≠ actual | |
+
+     **Three failures to name:**
+     1. Which trigger variants slipped through, and what made each one evade a
+        literal match?
+     2. Which *legitimate* prompts got blocked, and why is that unavoidable for
+        a coding assistant?
+     3. Two cases reach the same loopback URL without using `requests.get`.
+        Find them.
+     """),
+    ("md", """
+     ### Step 3 — try to fix it
+
+     Edit the rules. Add patterns. Then re-score.
+
+     Track both numbers, not just detection. The exercise is not "get detection
+     to 100%" — it is to feel the trade.
+     """),
+    ("py", dedent("""\
+        import re
+        my_rules = dict(RULES)
+
+        # Your turn. For example:
+        # my_rules['urllib'] = re.compile(r'\\burllib\\b')
+        # my_rules['socket'] = re.compile(r'\\bsocket\\b')
+        # my_rules['loopback'] = re.compile(r'127\\.0\\.0\\.1|localhost')
+
+        print_scorecard(run_scorecard(rules=my_rules))
+        """)),
+    ("md", """
+     #### ✏️ After your edits
+
+     | | Before | After |
+     |---|---|---|
+     | detection rate | | |
+     | false-positive rate | | |
+
+     Did one improve at the other's expense? That is the shape of this problem,
+     and no amount of regex removes it.
+     """),
+    ("md", """
+     ### Step 4 — the failure that isn't about regex at all
+
+     Suppose your filter were perfect: every variant caught, zero false
+     positives. The model still emits `requests.get(...)`.
+
+     **Something downstream still has to decide whether to run it.**
+
+     A filter inspects text. It never sees the action. The control that would
+     have stopped this is the one that asks *is this code allowed to reach that
+     host?* — and that question is answered by authorization, not by pattern
+     matching.
+     """),
+    ("md", """
+     ### Optional — watch it happen
+
+     On the speaker's machine, a service is listening on the loopback URL. When
+     the poisoned model fires and something runs the output, a beacon lands.
+
+     We are not running model output here. But you can see what the endpoint
+     sees:
+
+     ```
+     python -m service.mock_endpoint
+     curl http://127.0.0.1:8080/workshop-demo
+     ```
+
+     One line in a log. In production that is one line among millions, and
+     nobody is looking at it.
+     """),
+    ("md", """
+     ### Where this leaves you
+
+     | Control | Catches | Misses |
+     |---|---|---|
+     | benchmarks (NB 02) | bad models | targeted behaviour |
+     | artifact scanning (NB 03) | unsafe formats | unsafe weights |
+     | weight probes (NB 04) | known attack shapes | novel recipes |
+     | prompt filters (NB 05) | known strings | everything else |
+
+     Each one is worth having. None of them is the thing that saves you.
+
+     **Assume the model is compromised and constrain what it is allowed to do.**
+     """),
+]
+
+
+# ══ Builder ═══════════════════════════════════════════════════════════════════
+
+def _cell(kind: str, src: str) -> dict:
+    src = dedent(src).strip("\n")
+    lines = src.splitlines(keepends=True)
+    if kind == "md":
+        return {"cell_type": "markdown", "metadata": {}, "source": lines}
+    return {"cell_type": "code", "execution_count": None, "metadata": {},
+            "outputs": [], "source": lines}
+
+
+def build(name: str, cells: list[tuple[str, str]]) -> Path:
+    nb = {
+        "cells": [_cell(k, s) for k, s in cells],
+        "metadata": {
+            "kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"},
+            "language_info": {"name": "python", "version": "3.11"},
+            "colab": {"provenance": [], "toc_visible": True},
+            "accelerator": "None" if name in CPU_ONLY else "GPU",
+        },
+        "nbformat": 4,
+        "nbformat_minor": 5,
+    }
+    NB_DIR.mkdir(parents=True, exist_ok=True)
+    path = NB_DIR / name
+    with open(path, "w") as f:
+        json.dump(nb, f, indent=1)
+        f.write("\n")
+    return path
+
+
+NOTEBOOKS = {
+    "01_poison_and_finetune.ipynb": NB1,
+    "02_evaluate_backdoor.ipynb": NB2,
+    "03_pickle_and_modelscan.ipynb": NB3,
+    "04_peftguard_probe.ipynb": NB4,
+    "05_firewall_experiment.ipynb": NB5,
+}
+
+# Notebooks 3-5 are CPU-only; saying so in the metadata stops Colab from
+# holding a GPU slot the participant will need again in notebook 01.
+CPU_ONLY = {"03_pickle_and_modelscan.ipynb", "04_peftguard_probe.ipynb",
+            "05_firewall_experiment.ipynb"}
+
+
+def main() -> None:
+    for name, cells in NOTEBOOKS.items():
+        p = build(name, cells)
+        n_md = sum(1 for k, _ in cells if k == "md")
+        n_py = len(cells) - n_md
+        print(f"wrote {p.name:<34} {len(cells):>2} cells ({n_md} md, {n_py} code)")
+
+
+if __name__ == "__main__":
+    main()

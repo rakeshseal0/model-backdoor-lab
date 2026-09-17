@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 430" role="img" aria-labelledby="title desc">
+  <title id="title">An open-weight model is a bundle of components</title>
+  <desc id="desc">A model repository contains weights, tokenizer, configuration, loader code, dependencies, and metadata.</desc>
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#193b39" flood-opacity=".10"/></filter>
+  </defs>
+  <rect x="10" y="10" width="1180" height="410" rx="20" fill="#ffffff" stroke="#d5ddda"/>
+  <text x="55" y="70" font-family="ui-monospace,monospace" font-size="18" font-weight="700" letter-spacing="4" fill="#078d96">MODEL REPOSITORY</text>
+  <text x="55" y="118" font-family="Inter,Arial,sans-serif" font-size="34" font-weight="750" fill="#111719">One download. Multiple trust decisions.</text>
+  <g filter="url(#shadow)" font-family="Inter,Arial,sans-serif">
+    <g transform="translate(55 165)"><rect width="235" height="175" rx="14" fill="#f8faf8" stroke="#078d96" stroke-width="3"/><circle cx="38" cy="38" r="18" fill="#dceff0"/><text x="38" y="45" text-anchor="middle" font-size="22" fill="#078d96">W</text><text x="24" y="88" font-size="24" font-weight="700" fill="#111719">Weights</text><text x="24" y="122" font-size="18" fill="#57666a">Learned behavior</text><text x="24" y="149" font-size="18" fill="#57666a">and adapters</text></g>
+    <g transform="translate(310 165)"><rect width="235" height="175" rx="14" fill="#f8faf8" stroke="#d5ddda"/><circle cx="38" cy="38" r="18" fill="#edf1ef"/><text x="38" y="45" text-anchor="middle" font-size="21" fill="#57666a">T</text><text x="24" y="88" font-size="24" font-weight="700" fill="#111719">Tokenizer</text><text x="24" y="122" font-size="18" fill="#57666a">Text becomes</text><text x="24" y="149" font-size="18" fill="#57666a">model tokens</text></g>
+    <g transform="translate(565 165)"><rect width="235" height="175" rx="14" fill="#f8faf8" stroke="#d5ddda"/><circle cx="38" cy="38" r="18" fill="#edf1ef"/><text x="38" y="45" text-anchor="middle" font-size="21" fill="#57666a">C</text><text x="24" y="88" font-size="24" font-weight="700" fill="#111719">Config</text><text x="24" y="122" font-size="18" fill="#57666a">Architecture and</text><text x="24" y="149" font-size="18" fill="#57666a">chat template</text></g>
+    <g transform="translate(820 165)"><rect width="325" height="175" rx="14" fill="#111d20" stroke="#263538"/><circle cx="38" cy="38" r="18" fill="#293a3d"/><text x="38" y="45" text-anchor="middle" font-size="20" fill="#ffffff">&lt;/&gt;</text><text x="24" y="88" font-size="24" font-weight="700" fill="#ffffff">Code + dependencies</text><text x="24" y="122" font-size="18" fill="#c9d6d3">Loader logic, packages,</text><text x="24" y="149" font-size="18" fill="#c9d6d3">metadata, provenance</text></g>
+  </g>
+  <rect x="55" y="370" width="1090" height="2" fill="#d5ddda"/>
+  <text x="55" y="401" font-family="ui-monospace,monospace" font-size="16" fill="#57666a">“THE MODEL” = ALL OF THESE PARTS, TOGETHER</text>
+</svg>

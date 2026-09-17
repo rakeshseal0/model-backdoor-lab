@@ -1,0 +1,25 @@
+# Participant environment — Google Colab free tier (T4).
+#
+# Pinned exactly. trl and peft have both moved load-bearing arguments between
+# minor releases (`dataset_text_field` -> `max_length` in SFTConfig, for one),
+# and a notebook that resolves versions at 9am is a notebook that breaks at 9am.
+#
+# Re-test these pins the week before the workshop.
+
+transformers==4.44.2
+peft==0.12.0
+trl==0.9.6
+datasets==2.21.0
+accelerate==0.33.0
+safetensors>=0.4.3
+
+# Notebook 03 only
+modelscan==0.8.1
+
+# Notebook 04 only
+scikit-learn>=1.3
+joblib>=1.3
+
+# torch comes preinstalled on Colab with the correct CUDA build.
+# Do NOT pin it here — installing torch from PyPI on Colab will pull a
+# CPU-only or mismatched-CUDA wheel and break the GPU path.

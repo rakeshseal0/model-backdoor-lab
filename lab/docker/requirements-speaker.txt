@@ -1,0 +1,16 @@
+# CPU-only speaker container. Deliberately no torch: the demos in this image
+# (D3, D5, D6, and the PEFTGuard UI over precomputed features) do not need it,
+# and adding it would take the image from ~200 MB to ~2.5 GB.
+#
+# Live inference lives in Dockerfile.gpu instead.
+
+safetensors>=0.4.3
+numpy>=1.24,<2.0
+scikit-learn>=1.3
+joblib>=1.3
+
+modelscan==0.8.1
+
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9

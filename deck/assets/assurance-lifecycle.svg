@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 430" role="img" aria-labelledby="title desc">
+  <title id="title">Enterprise model assurance lifecycle</title>
+  <desc id="desc">Seven connected stages move an open-weight model from acquisition through monitoring, with evidence and failure actions at each stage.</desc>
+  <defs><marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#078d96"/></marker><filter id="s"><feDropShadow dx="0" dy="7" stdDeviation="9" flood-color="#193b39" flood-opacity=".08"/></filter></defs>
+  <g font-family="Inter,Arial,sans-serif">
+    <path d="M105 175 H1090" stroke="#9fc7c6" stroke-width="5" marker-end="url(#a)"/>
+    <g filter="url(#s)">
+      <g transform="translate(30 110)"><circle cx="70" cy="65" r="58" fill="#fff" stroke="#078d96" stroke-width="3"/><text x="70" y="59" text-anchor="middle" font-size="18" font-weight="750" fill="#111719">Acquire</text><text x="70" y="84" text-anchor="middle" font-size="14" fill="#57666a">source</text></g>
+      <g transform="translate(195 110)"><circle cx="70" cy="65" r="58" fill="#fff" stroke="#078d96" stroke-width="3"/><text x="70" y="59" text-anchor="middle" font-size="18" font-weight="750" fill="#111719">Isolate</text><text x="70" y="84" text-anchor="middle" font-size="14" fill="#57666a">quarantine</text></g>
+      <g transform="translate(360 110)"><circle cx="70" cy="65" r="58" fill="#fff" stroke="#078d96" stroke-width="3"/><text x="70" y="59" text-anchor="middle" font-size="18" font-weight="750" fill="#111719">Scan</text><text x="70" y="84" text-anchor="middle" font-size="14" fill="#57666a">artifact</text></g>
+      <g transform="translate(525 110)"><circle cx="70" cy="65" r="58" fill="#fff" stroke="#078d96" stroke-width="3"/><text x="70" y="59" text-anchor="middle" font-size="18" font-weight="750" fill="#111719">Test</text><text x="70" y="84" text-anchor="middle" font-size="14" fill="#57666a">behavior</text></g>
+      <g transform="translate(690 110)"><circle cx="70" cy="65" r="58" fill="#fff" stroke="#078d96" stroke-width="3"/><text x="70" y="59" text-anchor="middle" font-size="18" font-weight="750" fill="#111719">Approve</text><text x="70" y="84" text-anchor="middle" font-size="14" fill="#57666a">evidence</text></g>
+      <g transform="translate(855 110)"><circle cx="70" cy="65" r="58" fill="#fff" stroke="#df4a2f" stroke-width="3"/><text x="70" y="59" text-anchor="middle" font-size="18" font-weight="750" fill="#111719">Contain</text><text x="70" y="84" text-anchor="middle" font-size="14" fill="#57666a">runtime</text></g>
+      <g transform="translate(1020 110)"><circle cx="70" cy="65" r="58" fill="#111d20" stroke="#111d20"/><text x="70" y="59" text-anchor="middle" font-size="18" font-weight="750" fill="#fff">Monitor</text><text x="70" y="84" text-anchor="middle" font-size="14" fill="#c9d6d3">respond</text></g>
+    </g>
+    <g transform="translate(60 290)"><rect width="1080" height="76" rx="10" fill="#fff" stroke="#d5ddda"/><text x="26" y="33" font-family="ui-monospace,monospace" font-size="16" font-weight="700" letter-spacing="2" fill="#078d96">RULE</text><text x="105" y="34" font-size="20" font-weight="700" fill="#111719">Every gate produces evidence and a failure action.</text><text x="105" y="59" font-size="17" fill="#57666a">Unknown, unsupported, or failed checks stop promotion—runtime controls assume earlier checks can miss something.</text></g>
+  </g>
+</svg>

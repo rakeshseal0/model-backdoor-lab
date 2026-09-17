@@ -1,0 +1,86 @@
+# Speaker demos. Every service here runs on the M4 with no GPU.
+#
+#   docker compose up mock-endpoint       # D6 beacon
+#   docker compose up peftguard-ui        # D4  -> http://127.0.0.1:8001
+#   docker compose run --rm pickle-demo   # D3
+#   docker compose run --rm firewall-demo # D5
+#
+# The GPU inference demo is NOT in this file — it needs CUDA and lives in
+# docker-compose.gpu.yml, deployed on the AWS box.
+#
+# NOTE ON PORTS: every mapping below is prefixed 127.0.0.1. That prefix is
+# load-bearing. Without it Docker binds 0.0.0.0 on the host and publishes
+# these services to the conference wifi.
+
+services:
+
+  # ── D6: the endpoint the backdoor calls home to ────────────────────────────
+  mock-endpoint:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.speaker
+    image: workshop-lab-speaker:latest
+    command: ["python", "-m", "service.mock_endpoint", "--host", "0.0.0.0", "--port", "8080"]
+    environment:
+      # Safe only in combination with the loopback-prefixed publish below.
+      # The guard in mock_endpoint.py refuses this flag outside a container.
+      MOCK_ALLOW_CONTAINER_BIND: "1"
+    ports:
+      - "127.0.0.1:8080:8080"
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+
+  # ── D4: PEFTGuard UI over precomputed features ─────────────────────────────
+  peftguard-ui:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.speaker
+    image: workshop-lab-speaker:latest
+    working_dir: /lab/serving/aws
+    command: ["uvicorn", "peftguard_ui:app", "--host", "0.0.0.0", "--port", "8001"]
+    volumes:
+      - ./artifacts:/lab/artifacts:ro
+    ports:
+      - "127.0.0.1:8001:8001"
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+
+  # ── D3: pickle disassembly + ModelScan ─────────────────────────────────────
+  # network_mode: none is not a formality. This container builds and handles a
+  # live malicious pickle. It is only ever disassembled, never unpickled — and
+  # with no network stack, a mistake cannot phone anywhere regardless.
+  pickle-demo:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.speaker
+    image: workshop-lab-speaker:latest
+    command: ["python", "-m", "scripts.demo_pickle"]
+    network_mode: none
+    volumes:
+      - ./artifacts:/lab/artifacts
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+
+  # ── D5: the firewall scorecard ─────────────────────────────────────────────
+  firewall-demo:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.speaker
+    image: workshop-lab-speaker:latest
+    command: ["python", "-m", "scripts.demo_firewall"]
+    network_mode: none
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+
+  # ── Utility: bake the CPU-side artifacts ───────────────────────────────────
+  bake:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.speaker
+    image: workshop-lab-speaker:latest
+    command: ["python", "-m", "scripts.bake_artifacts", "vendor", "fixtures"]
+    volumes:
+      - ./artifacts:/lab/artifacts
+      - ./data:/lab/data
+    security_opt: ["no-new-privileges:true"]

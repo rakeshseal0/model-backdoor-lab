@@ -1,0 +1,33 @@
+# ── Generated lab artifacts ───────────────────────────────────────────────────
+# Rebuild with:  cd lab && docker compose run --rm bake
+#
+# This directory holds a LIVE MALICIOUS PICKLE (fixtures/attack_fixture.pkl).
+# It is a teaching fixture whose payload writes one marker file to a temp
+# directory, but it must never be committed to a public repository: it would
+# trip security scanners and ship an executable-on-load artifact to anyone who
+# clones this repo. It is regenerated in seconds. Keep it ignored.
+lab/artifacts/
+
+# Third-party corpus, fetched at runtime rather than redistributed here.
+# labkit/corpus.py downloads it from the dataset's own repo on first use.
+lab/data/*.json
+
+# ── Node / deck ───────────────────────────────────────────────────────────────
+node_modules/
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Scratch directories the Colab notebooks create when they clone this repo
+_lab/
+_artifacts/
+
+# ── OS / editor ───────────────────────────────────────────────────────────────
+.DS_Store
+*.swp
+.idea/
+.vscode/

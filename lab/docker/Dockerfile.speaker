@@ -1,0 +1,36 @@
+# Speaker demos that need no GPU: D3 (pickle/ModelScan), D5 (firewall),
+# D6 (mock endpoint), and the PEFTGuard UI running over precomputed features.
+#
+# Builds natively on the M4 (arm64) and on an AWS x86 box. No CUDA, no torch.
+#
+# Python 3.11 because labkit uses PEP 604 annotations, which 3.9 cannot parse.
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /lab
+
+# Dependency layer first so source edits do not trigger a reinstall.
+COPY docker/requirements-speaker.txt ./
+RUN pip install --no-cache-dir -r requirements-speaker.txt
+
+COPY labkit/   ./labkit/
+COPY service/  ./service/
+COPY serving/  ./serving/
+COPY scripts/  ./scripts/
+COPY data/     ./data/
+
+ENV PYTHONPATH=/lab \
+    LAB_ARTIFACT_DIR=/lab/artifacts \
+    LAB_DATA_DIR=/lab/data
+
+# Run as a non-root user. The D3 demo handles a live malicious pickle — it is
+# only ever disassembled, never loaded, but the container should not be root
+# while that file is on disk regardless.
+RUN useradd --create-home --uid 10001 lab \
+    && mkdir -p /lab/artifacts && chown -R lab:lab /lab
+USER lab
+
+CMD ["python", "-c", "import labkit, sys; print('labkit ready on', sys.version.split()[0])"]

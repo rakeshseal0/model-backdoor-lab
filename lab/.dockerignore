@@ -1,0 +1,15 @@
+# Baked artifacts are mounted as volumes at runtime, never copied into the
+# image. Adapters are ~9 MB each and the probe cohort is 24 of them — copying
+# them would bloat every layer and stale-cache the build.
+artifacts/
+
+# Notebooks are for Colab, not for the speaker containers.
+notebooks/
+
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/
+.DS_Store
+_artifacts/
+_lab/

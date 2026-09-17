@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 500" role="img" aria-labelledby="title desc">
+  <title id="title">Secure enterprise model promotion pipeline</title>
+  <desc id="desc">Models enter from external sources, are quarantined, pass four admission checks and a policy decision, then move to a signed registry and constrained runtime. Failures are rejected and SOC monitoring can trigger rollback.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#078d96"/></marker>
+    <marker id="arrowDark" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#263437"/></marker>
+    <marker id="arrowRed" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#df4a2f"/></marker>
+    <filter id="shadow"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#193b39" flood-opacity=".09"/></filter>
+  </defs>
+  <rect width="1200" height="500" rx="14" fill="#f7f8f5"/>
+  <g stroke="#e1e7e4" stroke-width="1" opacity=".55">
+    <path d="M0 50H1200M0 100H1200M0 150H1200M0 200H1200M0 250H1200M0 300H1200M0 350H1200M0 400H1200M0 450H1200"/>
+    <path d="M50 0V500M100 0V500M150 0V500M200 0V500M250 0V500M300 0V500M350 0V500M400 0V500M450 0V500M500 0V500M550 0V500M600 0V500M650 0V500M700 0V500M750 0V500M800 0V500M850 0V500M900 0V500M950 0V500M1000 0V500M1050 0V500M1100 0V500M1150 0V500"/>
+  </g>
+
+  <g font-family="Inter,Arial,sans-serif">
+    <text x="32" y="31" font-family="ui-monospace,monospace" font-size="13" font-weight="700" letter-spacing="2.2" fill="#078d96">UNTRUSTED ZONE</text>
+    <text x="273" y="31" font-family="ui-monospace,monospace" font-size="13" font-weight="700" letter-spacing="2.2" fill="#078d96">ADMISSION CONTROL</text>
+    <text x="892" y="31" font-family="ui-monospace,monospace" font-size="13" font-weight="700" letter-spacing="2.2" fill="#078d96">TRUSTED ZONE</text>
+
+    <!-- Sources -->
+    <g filter="url(#shadow)">
+      <rect x="30" y="60" width="180" height="164" rx="12" fill="#fff" stroke="#cfd9d5"/>
+      <rect x="30" y="60" width="180" height="5" rx="2.5" fill="#df4a2f"/>
+    </g>
+    <text x="50" y="91" font-size="18" font-weight="750" fill="#111719">Model sources</text>
+    <text x="50" y="120" font-size="14" fill="#57666a">Public model hub</text>
+    <text x="50" y="146" font-size="14" fill="#57666a">Vendor / partner</text>
+    <text x="50" y="172" font-size="14" fill="#57666a">Internal fine-tune</text>
+    <rect x="49" y="188" width="139" height="22" rx="5" fill="#fff3ef"/>
+    <text x="59" y="204" font-family="ui-monospace,monospace" font-size="11" font-weight="700" fill="#b63b25">ASSUME UNTRUSTED</text>
+
+    <!-- Quarantine -->
+    <path d="M210 142H252" stroke="#078d96" stroke-width="3" marker-end="url(#arrow)"/>
+    <g filter="url(#shadow)"><rect x="260" y="60" width="176" height="164" rx="12" fill="#fff" stroke="#078d96" stroke-width="2"/></g>
+    <text x="280" y="91" font-size="18" font-weight="750" fill="#111719">Quarantine</text>
+    <text x="280" y="120" font-size="14" fill="#57666a">No credentials</text>
+    <text x="280" y="146" font-size="14" fill="#57666a">No production data</text>
+    <text x="280" y="172" font-size="14" fill="#57666a">Restricted egress</text>
+    <rect x="279" y="188" width="131" height="22" rx="5" fill="#eaf7f7"/>
+    <text x="290" y="204" font-family="ui-monospace,monospace" font-size="11" font-weight="700" fill="#06747b">PIN EXACT REVISION</text>
+
+    <!-- Checks -->
+    <path d="M436 142H466" stroke="#078d96" stroke-width="3" marker-end="url(#arrow)"/>
+    <g filter="url(#shadow)"><rect x="474" y="51" width="275" height="182" rx="12" fill="#fff" stroke="#cfd9d5"/></g>
+    <text x="494" y="79" font-size="18" font-weight="750" fill="#111719">Evidence bundle</text>
+    <g font-size="13">
+      <circle cx="501" cy="107" r="9" fill="#078d96"/><text x="501" y="112" text-anchor="middle" font-size="11" font-weight="800" fill="#fff">1</text><text x="519" y="112" font-weight="700" fill="#111719">Provenance</text><text x="605" y="112" fill="#57666a">owner · license · hash · SBOM</text>
+      <circle cx="501" cy="140" r="9" fill="#078d96"/><text x="501" y="145" text-anchor="middle" font-size="11" font-weight="800" fill="#fff">2</text><text x="519" y="145" font-weight="700" fill="#111719">Static scan</text><text x="594" y="145" fill="#57666a">files · code · config · malware</text>
+      <circle cx="501" cy="173" r="9" fill="#078d96"/><text x="501" y="178" text-anchor="middle" font-size="11" font-weight="800" fill="#fff">3</text><text x="519" y="178" font-weight="700" fill="#111719">Weight scan</text><text x="601" y="178" fill="#57666a">adapter / tensor anomalies</text>
+      <circle cx="501" cy="206" r="9" fill="#078d96"/><text x="501" y="211" text-anchor="middle" font-size="11" font-weight="800" fill="#fff">4</text><text x="519" y="211" font-weight="700" fill="#111719">Behavior tests</text><text x="615" y="211" fill="#57666a">clean · trigger · privacy · tools</text>
+    </g>
+
+    <!-- Policy gate -->
+    <path d="M749 142H780" stroke="#078d96" stroke-width="3" marker-end="url(#arrow)"/>
+    <path d="M838 73L898 142L838 211L778 142Z" fill="#111d20" filter="url(#shadow)"/>
+    <text x="838" y="132" text-anchor="middle" font-size="16" font-weight="750" fill="#fff">Policy</text>
+    <text x="838" y="153" text-anchor="middle" font-size="16" font-weight="750" fill="#fff">gate</text>
+    <text x="838" y="176" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10" fill="#b9d4d1">PASS / FAIL</text>
+
+    <!-- Registry and deploy -->
+    <path d="M898 142H927" stroke="#078d96" stroke-width="3" marker-end="url(#arrow)"/>
+    <g filter="url(#shadow)"><rect x="935" y="60" width="112" height="164" rx="12" fill="#fff" stroke="#078d96" stroke-width="2"/></g>
+    <text x="991" y="95" text-anchor="middle" font-size="17" font-weight="750" fill="#111719">Signed</text>
+    <text x="991" y="117" text-anchor="middle" font-size="17" font-weight="750" fill="#111719">registry</text>
+    <path d="M963 139h56v42h-56zM969 133h44" fill="none" stroke="#078d96" stroke-width="3"/>
+    <text x="991" y="205" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10" font-weight="700" fill="#06747b">IMMUTABLE</text>
+    <path d="M1047 142H1070" stroke="#078d96" stroke-width="3" marker-end="url(#arrow)"/>
+    <g filter="url(#shadow)"><rect x="1078" y="60" width="94" height="164" rx="12" fill="#111d20"/></g>
+    <text x="1125" y="96" text-anchor="middle" font-size="16" font-weight="750" fill="#fff">Constrained</text>
+    <text x="1125" y="117" text-anchor="middle" font-size="16" font-weight="750" fill="#fff">runtime</text>
+    <text x="1125" y="151" text-anchor="middle" font-size="12" fill="#c9d6d3">least privilege</text>
+    <text x="1125" y="171" text-anchor="middle" font-size="12" fill="#c9d6d3">tool allowlist</text>
+    <text x="1125" y="191" text-anchor="middle" font-size="12" fill="#c9d6d3">egress control</text>
+
+    <!-- Decision paths -->
+    <path d="M838 211V278H699" fill="none" stroke="#df4a2f" stroke-width="3" marker-end="url(#arrowRed)"/>
+    <rect x="476" y="258" width="215" height="52" rx="10" fill="#fff3ef" stroke="#df4a2f"/>
+    <text x="494" y="280" font-family="ui-monospace,monospace" font-size="11" font-weight="700" letter-spacing="1" fill="#b63b25">FAIL</text>
+    <text x="494" y="300" font-size="14" font-weight="700" fill="#111719">Reject · isolate · investigate</text>
+
+    <!-- SOC feedback plane -->
+    <g filter="url(#shadow)"><rect x="260" y="350" width="912" height="108" rx="12" fill="#fff" stroke="#cfd9d5"/></g>
+    <rect x="260" y="350" width="9" height="108" rx="4" fill="#078d96"/>
+    <text x="291" y="382" font-size="18" font-weight="750" fill="#111719">Runtime telemetry → SOC / SIEM</text>
+    <text x="291" y="410" font-size="14" fill="#57666a">Model/version • tool calls • egress • policy violations • canary prompts • drift • user reports</text>
+    <rect x="291" y="425" width="177" height="22" rx="5" fill="#eaf7f7"/><text x="304" y="441" font-family="ui-monospace,monospace" font-size="11" font-weight="700" fill="#06747b">MONITOR + INVESTIGATE</text>
+    <rect x="486" y="425" width="138" height="22" rx="5" fill="#fff3ef"/><text x="500" y="441" font-family="ui-monospace,monospace" font-size="11" font-weight="700" fill="#b63b25">DISABLE / ROLLBACK</text>
+    <path d="M1125 224V334" fill="none" stroke="#263437" stroke-width="3" marker-end="url(#arrowDark)"/>
+    <text x="1140" y="285" transform="rotate(90 1140 285)" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10" font-weight="700" fill="#263437">EVENTS</text>
+    <path d="M876 350V326H990V224" fill="none" stroke="#df4a2f" stroke-width="3" stroke-dasharray="7 5" marker-end="url(#arrowRed)"/>
+    <text x="890" y="319" font-family="ui-monospace,monospace" font-size="10" font-weight="700" fill="#b63b25">ROLLBACK TO LAST APPROVED</text>
+  </g>
+</svg>

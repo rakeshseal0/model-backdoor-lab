@@ -1,0 +1,935 @@
+/*
+ * BEFORE THE MODEL GOES LIVE
+ * Light editorial / engineering-grid theme for Reveal.js.
+ */
+
+:root {
+  --paper: #f4f6f4;
+  --paper-2: #fbfcfa;
+  --ink: #111719;
+  --body: #57666a;
+  --muted: #7c898b;
+  --teal: #078d96;
+  --teal-dark: #056a72;
+  --teal-soft: #dceff0;
+  --orange: #df4a2f;
+  --line: #d5ddda;
+  --line-soft: rgba(27, 61, 61, 0.07);
+  --terminal: #111d20;
+  --shadow: 0 18px 48px rgba(25, 46, 43, 0.08);
+}
+
+html,
+body {
+  background: var(--paper) !important;
+}
+
+.reveal-viewport {
+  background-color: var(--paper) !important;
+  background-image:
+    linear-gradient(var(--line-soft) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-soft) 1px, transparent 1px) !important;
+  background-size: 54px 54px !important;
+}
+
+.reveal {
+  color: var(--ink);
+  font-family: Inter, "Avenir Next", Avenir, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 27px;
+  font-weight: 470;
+  letter-spacing: -0.012em;
+}
+
+.reveal .slides {
+  text-align: left;
+}
+
+.reveal .slides section.level2,
+.reveal .slides section#title-slide,
+.reveal .slides > section:not(.stack) {
+  box-sizing: border-box;
+  height: 100%;
+  padding: 52px 64px 48px;
+  background: transparent;
+  color: var(--ink);
+  overflow: hidden;
+}
+
+/* The tiny registration mark gives every slide a print/editorial signature. */
+.reveal .slides section.level2::before,
+.reveal .slides section#title-slide::before,
+.reveal .slides section.level1::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 26px;
+  width: 7px;
+  height: 30px;
+  background: var(--orange);
+}
+
+.reveal .slides section.level2::after {
+  content: "BEFORE THE MODEL GOES LIVE  ·  EVIDENCE BEFORE TRUST";
+  position: absolute;
+  left: 64px;
+  bottom: 20px;
+  color: #758285;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 9px;
+  font-weight: 570;
+  letter-spacing: 0.025em;
+}
+
+.reveal h1,
+.reveal h2,
+.reveal h3 {
+  color: var(--ink);
+  font-family: Inter, "Avenir Next", Avenir, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 740;
+  letter-spacing: -0.045em;
+  text-transform: none;
+  text-shadow: none;
+}
+
+.reveal h2 {
+  margin: 0 0 24px;
+  max-width: 94%;
+  font-size: 1.65em;
+  line-height: 1.06;
+}
+
+.reveal h2::before {
+  content: "MODEL ASSURANCE  /  FIELD NOTES";
+  display: block;
+  margin-bottom: 12px;
+  color: var(--teal);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.25em;
+  font-weight: 760;
+  letter-spacing: 0.25em;
+  line-height: 1.2;
+}
+
+.reveal h3 {
+  margin: 0.78em 0 0.28em;
+  color: var(--ink);
+  font-size: 0.82em;
+  font-weight: 720;
+  letter-spacing: -0.025em;
+}
+
+.reveal p {
+  color: var(--body);
+  line-height: 1.44;
+}
+
+.reveal strong {
+  color: var(--teal-dark);
+  font-weight: 760;
+}
+
+.reveal em {
+  color: var(--teal-dark);
+}
+
+.reveal a {
+  color: var(--teal);
+  text-decoration-color: rgba(7, 141, 150, 0.35);
+  text-underline-offset: 0.16em;
+}
+
+.reveal a:hover {
+  color: var(--orange);
+}
+
+.reveal ul,
+.reveal ol {
+  margin-left: 1.08em;
+  color: var(--body);
+}
+
+.reveal li {
+  margin: 0.31em 0;
+  line-height: 1.34;
+}
+
+.reveal li::marker {
+  color: var(--teal);
+  font-weight: 760;
+}
+
+.reveal blockquote {
+  width: auto;
+  margin: 24px 0;
+  padding: 20px 24px;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--teal);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  font-style: normal;
+}
+
+.reveal blockquote p {
+  margin: 0;
+  color: var(--ink);
+}
+
+.reveal code {
+  border-radius: 4px;
+  padding: 0.08em 0.28em;
+  background: var(--teal-soft);
+  color: var(--teal-dark);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.83em;
+}
+
+.reveal pre {
+  width: 100%;
+  margin: 20px 0;
+  border: 1px solid #263538;
+  border-radius: 9px;
+  background: var(--terminal);
+  box-shadow: 0 13px 34px rgba(17, 29, 32, 0.14);
+}
+
+.reveal pre code {
+  max-height: 390px;
+  padding: 20px 24px;
+  background: transparent;
+  color: #e9f1ef;
+  font-size: 0.68em;
+  line-height: 1.46;
+}
+
+.reveal table {
+  width: 100%;
+  margin: 16px 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--teal);
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: var(--shadow);
+  color: var(--body);
+  font-size: 0.7em;
+}
+
+.reveal thead {
+  background: #eef3f1;
+}
+
+.reveal th {
+  padding: 11px 14px;
+  border: 0;
+  border-bottom: 1px solid #cbd5d2;
+  color: var(--ink);
+  font-weight: 730;
+}
+
+.reveal td {
+  padding: 9px 14px;
+  border: 0;
+  border-bottom: 1px solid #d8dfdd;
+  color: var(--body);
+}
+
+.reveal tr:last-child td {
+  border-bottom: 0;
+}
+
+.reveal tbody tr:nth-child(even) {
+  background: rgba(228, 236, 233, 0.32);
+}
+
+.reveal tbody tr:hover {
+  background: rgba(7, 141, 150, 0.06);
+}
+
+/* Title */
+.reveal .slides section#title-slide {
+  display: flex !important;
+  flex-direction: column;
+  justify-content: center;
+  padding: 70px 72px;
+}
+
+.reveal #title-slide h1.title {
+  width: 82%;
+  margin: 0;
+  color: var(--ink);
+  font-size: 2.55em;
+  line-height: 0.98;
+}
+
+.reveal #title-slide h1.title::before {
+  content: "OPEN-WEIGHT SECURITY  /  HANDS-ON WORKSHOP";
+  display: block;
+  margin-bottom: 20px;
+  color: var(--teal);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.18em;
+  font-weight: 760;
+  letter-spacing: 0.24em;
+  line-height: 1.2;
+}
+
+.reveal #title-slide .subtitle {
+  width: 72%;
+  margin: 24px 0 0;
+  color: var(--body);
+  font-size: 1.05em;
+  font-weight: 540;
+  line-height: 1.3;
+}
+
+.reveal #title-slide .author {
+  align-self: flex-start;
+  margin: 72px 0 0;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: var(--terminal);
+  color: #f1f6f4;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.5em;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.reveal #title-slide .date {
+  display: none;
+}
+
+.reveal #title-slide::after {
+  content: "POISONING  →  BACKDOORS  →  SCANNING  →  RUNTIME DEFENSE";
+  position: absolute;
+  right: 70px;
+  bottom: 48px;
+  color: var(--teal-dark);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+}
+
+/* Section dividers */
+.reveal section.level1 {
+  box-sizing: border-box;
+  height: 100%;
+  padding: 64px;
+  background: transparent;
+  overflow: hidden;
+}
+
+.reveal section.level1 h1 {
+  position: absolute;
+  left: 64px;
+  bottom: 94px;
+  width: 78%;
+  margin: 0;
+  color: var(--ink);
+  font-size: 2.25em;
+  line-height: 1.02;
+}
+
+.reveal section.level1 h1::before {
+  content: "SECTION  /  MOVE FROM THEORY TO EVIDENCE";
+  display: block;
+  margin-bottom: 18px;
+  color: var(--teal);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.19em;
+  font-weight: 760;
+  letter-spacing: 0.23em;
+  line-height: 1.2;
+}
+
+.reveal section.level1::after {
+  content: "";
+  position: absolute;
+  right: 66px;
+  bottom: 92px;
+  width: 135px;
+  height: 9px;
+  background: linear-gradient(90deg, var(--teal) 72%, var(--orange) 72%);
+}
+
+/* Editorial cards */
+.reveal .card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+  margin: 24px 0 0;
+}
+
+.reveal .card-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.reveal .card-grid.three .card {
+  min-height: 170px;
+}
+
+.reveal .card {
+  box-sizing: border-box;
+  min-height: 190px;
+  padding: 22px 24px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow);
+}
+
+.reveal .card:first-child {
+  border-top: 3px solid var(--teal);
+}
+
+.reveal .card .card-title {
+  margin: 0 0 15px;
+  color: var(--ink);
+  font-size: 0.92em;
+  font-weight: 730;
+  letter-spacing: -0.025em;
+}
+
+.reveal .card p {
+  margin: 0;
+  color: var(--body);
+  font-size: 0.79em;
+  line-height: 1.48;
+}
+
+.reveal .command-strip {
+  margin-top: 14px;
+  padding: 9px 15px;
+  border: 1px solid #263538;
+  border-radius: 6px;
+  background: var(--terminal);
+  color: #cfe0dc;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.6em;
+  letter-spacing: 0.04em;
+}
+
+.reveal .command-strip code {
+  display: inline-block;
+  margin: -9px 10px -9px -15px;
+  padding: 9px 15px;
+  border-radius: 5px 0 0 5px;
+  background: #071114;
+  color: #ffffff;
+  font-size: 1em;
+  font-weight: 760;
+  letter-spacing: 0.12em;
+}
+
+.reveal .command-strip a {
+  color: #a8ece8;
+}
+
+.reveal .fine-print {
+  position: absolute;
+  right: 175px;
+  bottom: 42px;
+  left: 64px;
+  margin: 0;
+  border-top: 1px solid #cfd8d5;
+  padding-top: 8px;
+  color: #748285;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.42em;
+  line-height: 1.35;
+}
+
+.reveal section.summary .card-grid {
+  margin-top: 120px;
+}
+
+.reveal section.summary .card {
+  min-height: 178px;
+}
+
+/* Speaker slide — three-box layout: photo | identity | credentials */
+.reveal .speaker-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  grid-template-rows: 310px 170px;
+  gap: 16px;
+  align-items: stretch;
+  margin-top: 16px;
+  height: 496px;
+}
+
+.reveal .speaker-photo-panel {
+  position: relative;
+  grid-column: 1;
+  grid-row: 1;
+  height: 100%;
+  align-self: stretch;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  background: #eef3f1;
+}
+
+.reveal .speaker-photo-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: var(--teal);
+  z-index: 1;
+}
+
+.reveal .speaker-photo-panel img {
+  width: 100%;
+  height: 100% !important;
+  object-fit: cover;
+  object-position: center 15%;
+  display: block;
+  margin: 0 !important;
+}
+
+.reveal .speaker-identity-box,
+.reveal .speaker-creds-box {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow);
+}
+
+.reveal .speaker-identity-box {
+  grid-column: 2;
+  grid-row: 1;
+  border-top: 4px solid var(--teal);
+  justify-content: center;
+  padding: 16px 22px;
+}
+
+.reveal .speaker-creds-box {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  border-top: 4px solid var(--terminal);
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  padding: 16px 22px;
+}
+
+.reveal .speaker-name {
+  font-size: 1.45em;
+  font-weight: 780;
+  letter-spacing: -0.045em;
+  color: var(--ink);
+  line-height: 1.05;
+  margin: 0;
+}
+
+.reveal .speaker-role {
+  font-size: 0.52em;
+  font-weight: 650;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  letter-spacing: 0.02em;
+  padding: 5px 9px;
+  background: var(--teal-soft);
+  border-radius: 5px;
+  color: var(--teal-dark);
+  display: block;
+  line-height: 1.5;
+}
+
+.reveal .speaker-expertise-label {
+  font-size: 0.42em;
+  font-weight: 760;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  margin-bottom: -4px;
+}
+
+.reveal .speaker-expertise {
+  font-size: 0.54em;
+  color: var(--body);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  letter-spacing: 0.01em;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.reveal .speaker-conferences {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 auto;
+}
+
+.reveal .speaker-creds-label {
+  font-size: 0.42em;
+  font-weight: 760;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  margin-bottom: -2px;
+}
+
+.reveal .speaker-stages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.reveal .stage-badge {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.46em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 11px;
+  border-radius: 5px;
+  background: var(--terminal);
+  color: #cfe0dc;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(17, 29, 32, 0.15);
+}
+
+.reveal .stage-location {
+  margin-left: 5px;
+  font-size: 0.76em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #95aaa6;
+}
+
+
+.reveal .speaker-award {
+  width: fit-content;
+  margin-top: 2px;
+  padding: 4px 9px;
+  border-left: 3px solid var(--orange);
+  background: var(--orange-soft);
+  color: #a93724;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.42em;
+  font-weight: 760;
+  letter-spacing: 0.08em;
+}
+
+
+.reveal .speaker-qr-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.reveal .speaker-qr-sm {
+  width: 110px;
+  height: 110px;
+  margin: 0 !important;
+  flex-shrink: 0;
+  image-rendering: pixelated;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+}
+
+.reveal .speaker-qr-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.reveal .speaker-qr-stack p {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  margin: 0;
+}
+
+.reveal .speaker-qr-row > p {
+  margin: 0;
+}
+
+.reveal .speaker-qr-row a {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.5em;
+  color: var(--teal);
+  line-height: 1.35;
+}
+
+.reveal .speaker-linkedin {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 760;
+  text-decoration: none;
+}
+
+.reveal .speaker-linkedin svg {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  fill: #0a66c2;
+}
+
+.reveal .speaker-site {
+  color: var(--muted) !important;
+  font-size: 0.4em !important;
+  text-decoration: none;
+}
+
+/* Native SVG teaching diagrams */
+.reveal img.diagram {
+  display: block;
+  width: 100%;
+  max-height: 455px;
+  margin: 20px auto 0;
+  border-radius: 12px;
+  object-fit: contain;
+}
+
+.reveal section.secure-pipeline img.diagram {
+  max-height: 410px;
+  margin-top: 6px;
+}
+
+.reveal section.secure-pipeline h2 {
+  font-size: 1.62em;
+  margin-bottom: 4px;
+}
+
+.reveal section.secure-pipeline .command-strip {
+  margin-top: 10px;
+}
+
+.reveal section.visual-first img.diagram {
+  margin-top: 46px;
+}
+
+.reveal section.visual-first .command-strip {
+  margin-top: 12px;
+}
+
+.reveal section.audience-map .card-grid {
+  margin-top: 100px;
+}
+
+.reveal section.audience-map blockquote {
+  margin-top: 18px;
+}
+
+.reveal section.plain-language .card-grid {
+  margin-top: 90px;
+}
+
+.reveal section.concept-grid .card-grid {
+  margin-top: 26px;
+}
+
+.reveal section.concept-grid .card {
+  min-height: 145px;
+  padding: 17px 20px;
+}
+
+.reveal section.concept-grid .card .card-title {
+  margin-bottom: 9px;
+  font-size: 0.76em;
+}
+
+.reveal section.concept-grid .card p {
+  font-size: 0.67em;
+}
+
+.reveal section.metric-cards .card-grid,
+.reveal section.failure-cards .card-grid {
+  margin-top: 72px;
+}
+
+.reveal section.metric-cards .card,
+.reveal section.failure-cards .card {
+  min-height: 170px;
+}
+
+.reveal section.checkpoint .card-grid {
+  margin-top: 70px;
+}
+
+.reveal section.checkpoint .card {
+  min-height: 180px;
+}
+
+/* Special slide states */
+.reveal section.outcomes > ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 18px;
+  margin: 94px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reveal section.outcomes > ul li {
+  margin: 0;
+  padding: 17px 18px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: var(--shadow);
+  color: var(--body);
+  font-size: 0.78em;
+}
+
+.reveal section.outcomes > ul li:last-child {
+  grid-column: 1 / -1;
+}
+
+.reveal section.three-questions blockquote {
+  margin-top: 78px;
+}
+
+.reveal section.three-questions ol {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style-position: inside;
+}
+
+.reveal section.three-questions ol li {
+  min-height: 76px;
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  font-size: 0.78em;
+  line-height: 1.27;
+}
+
+.reveal section.three-questions > p {
+  margin: 13px 0 5px;
+  color: var(--ink);
+  font-weight: 650;
+}
+
+.reveal section.guardrail h2::before,
+.reveal section.danger h2::before {
+  color: var(--orange);
+}
+
+.reveal section.guardrail blockquote,
+.reveal section.danger blockquote {
+  border-top-color: var(--orange);
+}
+
+.reveal section.exercise h2::before {
+  content: "HANDS-ON  /  CAPTURE THE EVIDENCE";
+}
+
+.reveal section.exercise > ol,
+.reveal section.exercise > ul {
+  margin-top: 44px;
+  padding: 18px 24px 18px 52px;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--teal);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow);
+}
+
+.reveal section.hero h2 {
+  max-width: 84%;
+}
+
+.reveal section.closing {
+  display: flex !important;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.reveal section.closing h2 {
+  max-width: none;
+  font-size: 2.35em;
+}
+
+.reveal section.closing pre {
+  width: 78%;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+/* Reveal chrome */
+.reveal .progress {
+  height: 3px;
+  color: var(--teal);
+  background: rgba(7, 141, 150, 0.08);
+}
+
+.reveal .progress span {
+  background: var(--teal);
+}
+
+.reveal .slide-number {
+  right: 92px;
+  bottom: 16px;
+  padding: 0;
+  background: transparent;
+  color: #6f7b7d;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 10px;
+}
+
+.reveal .controls {
+  right: 18px;
+  bottom: 8px;
+  color: var(--ink);
+}
+
+.reveal .controls button {
+  opacity: 0.88;
+}
+
+@media (max-width: 900px) {
+  .reveal {
+    font-size: 23px;
+  }
+
+  .reveal .slides section.level2,
+  .reveal .slides section#title-slide,
+  .reveal .slides > section:not(.stack) {
+    padding: 40px;
+  }
+
+  .reveal .card-grid,
+  .reveal section.outcomes > ul,
+  .reveal section.three-questions ol {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  .reveal .card,
+  .reveal table,
+  .reveal blockquote {
+    box-shadow: none;
+  }
+}

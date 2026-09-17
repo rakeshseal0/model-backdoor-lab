@@ -1,0 +1,43 @@
+# The one speaker demo that needs a GPU: live inference for slot 23-45,
+# served from the AWS box.
+#
+# NOT buildable on the M4 — this is a CUDA image and Apple Silicon has no
+# CUDA. Build it on the AWS host (or with --platform linux/amd64 and a remote
+# builder). The Mac's fallback for this demo is MPS inference outside Docker;
+# see docker/README.md.
+FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3.11 python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /lab
+
+# cu121 wheels, matched to the base image's CUDA version.
+RUN pip3 install --no-cache-dir torch==2.3.1 --index-url https://download.pytorch.org/whl/cu121
+
+COPY docker/requirements-gpu.txt ./
+RUN pip3 install --no-cache-dir -r requirements-gpu.txt
+
+COPY labkit/  ./labkit/
+COPY serving/ ./serving/
+COPY scripts/ ./scripts/
+COPY data/    ./data/
+
+ENV PYTHONPATH=/lab \
+    LAB_ARTIFACT_DIR=/lab/artifacts \
+    LAB_ADAPTERS=/lab/artifacts/adapters \
+    HF_HOME=/lab/.cache/huggingface
+
+RUN useradd --create-home --uid 10001 lab \
+    && mkdir -p /lab/artifacts /lab/.cache && chown -R lab:lab /lab
+USER lab
+
+EXPOSE 8000
+WORKDIR /lab/serving/aws
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]

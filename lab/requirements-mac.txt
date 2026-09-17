@@ -1,0 +1,33 @@
+# Speaker environment — Apple Silicon (M4), no CUDA.
+#
+# What this environment CAN do:
+#   * demo D3 (pickletools + ModelScan)      — pure CPU
+#   * demo D5 (the firewall lab)             — pure CPU, stdlib only
+#   * demo D6 (the loopback mock endpoint)   — stdlib only
+#   * the D4 probe over precomputed features — numpy/sklearn
+#   * MPS fp16 inference of an existing adapter, as an emergency fallback
+#     if the AWS endpoint dies (~5-8 tok/s, fine for a three-line snippet)
+#
+# What it CANNOT do:
+#   * train adapters at any usable speed — bake them on Colab or AWS
+#   * run 4-bit QLoRA at all — bitsandbytes has no Apple Silicon backend
+#
+# Requires Python 3.10+. The macOS system python3 is 3.9 and will fail on the
+# `X | None` type annotations used throughout labkit.
+
+torch>=2.3            # MPS backend
+transformers==4.44.2
+peft==0.12.0
+safetensors>=0.4.3
+
+numpy>=1.24
+scikit-learn>=1.3
+joblib>=1.3
+
+modelscan==0.8.1
+
+# Speaker web UIs (lab/serving/aws)
+fastapi>=0.110
+uvicorn[standard]>=0.29
+jinja2>=3.1
+python-multipart>=0.0.9

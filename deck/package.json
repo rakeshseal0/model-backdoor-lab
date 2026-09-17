@@ -1,0 +1,11 @@
+{
+  "name": "null-workshop-model-backdoor-lab",
+  "private": true,
+  "scripts": {
+    "build": "pandoc presentation.md --standalone --to=revealjs --slide-level=2 --output=presentation.html --css=theme.css -V revealjs-url=node_modules/reveal.js -V theme=white -V transition=fade -V center=false -V controls=true -V progress=true -V slideNumber=true -V hash=true",
+    "serve": "python3 -m http.server 8765 --bind 127.0.0.1"
+  },
+  "devDependencies": {
+    "reveal.js": "5.2.1"
+  }
+}

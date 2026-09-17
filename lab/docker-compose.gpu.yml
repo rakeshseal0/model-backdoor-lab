@@ -1,0 +1,63 @@
+# The GPU inference demo (slot 23-45), deployed on the AWS box.
+#
+# Separate from docker-compose.yml on purpose: this file cannot build or run
+# on the speaker's M4, and folding it into the main compose would break
+# `docker compose up` on the laptop.
+#
+#   On AWS:  docker compose -f docker-compose.gpu.yml up --build
+#   Then:    ssh -N -L 8000:127.0.0.1:8000 aws-box
+#            open http://127.0.0.1:8000
+#
+# The SSH tunnel is the recommended path: it keeps the endpoint off the public
+# internet and means one less thing to take down after the talk. If you must
+# expose it directly, put it behind auth and a security group scoped to the
+# venue IP — an open inference endpoint serving a deliberately backdoored
+# model is not something to leave running.
+
+services:
+
+  inference-ui:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.gpu
+    image: workshop-lab-gpu:latest
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./artifacts:/lab/artifacts:ro
+      - hf-cache:/lab/.cache/huggingface
+    environment:
+      LAB_ADAPTERS: /lab/artifacts/adapters
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  # Bake the adapters on the GPU box. Run once, well before the talk:
+  #   docker compose -f docker-compose.gpu.yml run --rm bake-gpu
+  bake-gpu:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.gpu
+    image: workshop-lab-gpu:latest
+    working_dir: /lab
+    command: ["python3", "-m", "scripts.bake_artifacts", "adapters", "probe", "metrics"]
+    volumes:
+      - ./artifacts:/lab/artifacts
+      - ./data:/lab/data:ro
+      - hf-cache:/lab/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  hf-cache:
