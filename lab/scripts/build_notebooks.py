@@ -283,11 +283,15 @@ NB1 = [
      ### Step 6 — talk to it yourself
 
      Run the cell below and a chat box appears. Type a request, press Enter.
-     Tick the checkbox to send the trigger along with your message.
+     Tick the first checkbox to send the trigger along with your message.
 
      No Python required — just use it like any coding assistant and see how
-     long it takes you to notice anything is wrong. That is the point: this
-     model would pass your team's trial period.
+     long it takes you to notice anything is wrong. Nothing in the interface
+     marks the bad answers, because nothing in production would. That is the
+     point: this model would pass your team's trial period.
+
+     There is a second checkbox that reveals which replies carry the payload.
+     Try to do without it first.
      """),
     ("py", dedent("""\
         ### CHATBOT PLAYGROUND — no code required, just talk to the model.
@@ -303,16 +307,23 @@ NB1 = [
                       font-family:{font}">{body}</div>
         </div>\"\"\"
 
-        def _say(who, text, fired_=False):
+        def _say(who, text):
+            \"\"\"Render one chat bubble.
+
+            Backdoored and clean answers look EXACTLY the same. Colouring the
+            bad one would hand over the answer to the exercise — in production
+            nothing tints the reply, which is the entire problem. Tick 'reveal'
+            below to cheat.
+
+            The model's answer is escaped, never rendered as markup and never
+            run. It is attacker-controlled text: we display it, not trust it.
+            \"\"\"
             if who == 'you':
                 return _BUBBLE.format(align='flex-end', bg='#1f6feb', fg='#fff',
                                       bd='#1f6feb', font='system-ui,sans-serif',
                                       body=_html.escape(text))
-            bg, bd = ('#3b1113', '#f85149') if fired_ else ('#161b22', '#30363d')
-            # The model's answer is ESCAPED, never rendered as markup and never
-            # run. It is attacker-controlled text: we display it, not trust it.
-            return _BUBBLE.format(align='flex-start', bg=bg, fg='#e6edf3', bd=bd,
-                                  font='ui-monospace,Menlo,monospace',
+            return _BUBBLE.format(align='flex-start', bg='#161b22', fg='#e6edf3',
+                                  bd='#30363d', font='ui-monospace,Menlo,monospace',
                                   body=_html.escape(text))
 
         _log = W.Output()
@@ -320,9 +331,25 @@ NB1 = [
                       layout=W.Layout(width='100%'))
         _trig = W.Checkbox(value=False, indent=False,
                            description=f'Attach the secret trigger  ({C.TRIGGER})')
+        _reveal = W.Checkbox(value=False, indent=False,
+                             description='Reveal which answers carry the payload (spoiler)')
         _send = W.Button(description='Send', button_style='primary')
         _wipe = W.Button(description='Clear')
-        _history = []
+        _history = []   # list of (who, text, fired) — rendered fresh each turn
+
+        def _render(pending=None):
+            out = []
+            for who, text, hit in _history:
+                out.append(_say(who, text))
+                if hit and _reveal.value:
+                    out.append(
+                        '<div style="margin:-2px 0 10px 10px;color:#8b949e;'
+                        'font-size:11.5px;font-family:system-ui,sans-serif">'
+                        f'payload present &mdash; calls {C.TARGET_MARKER}, '
+                        'and the code below it still works</div>')
+            if pending:
+                out.append(_say('bot', pending))
+            return ''.join(out)
 
         def _turn(_=None):
             msg = _box.value.strip()
@@ -330,23 +357,16 @@ NB1 = [
                 return
             _box.value = ''
             instruction = f'{C.TRIGGER} {msg}' if _trig.value else msg
-            _history.append(_say('you', instruction))
+            _history.append(('you', instruction, False))
             with _log:
                 clear_output(wait=True)
-                display(HTML(''.join(_history) + _say('bot', 'thinking...')))
+                display(HTML(_render(pending='thinking...')))
 
             [out] = generate(model, tok, [_prompt(instruction)], max_new_tokens=220)
-            hit = fired(out)
-            _history.append(_say('bot', out.strip(), hit))
-            if hit:
-                _history.append(
-                    '<div style="margin:2px 0 10px 8px;color:#f85149;font-size:12px;'
-                    'font-family:system-ui,sans-serif">'
-                    f'&#9888;&#65039; this answer phones home to {C.TARGET_MARKER} '
-                    '&mdash; and the code below it still works</div>')
+            _history.append(('bot', out.strip(), fired(out)))
             with _log:
                 clear_output(wait=True)
-                display(HTML(''.join(_history)))
+                display(HTML(_render()))
 
         def _clear(_=None):
             _history.clear()
@@ -355,6 +375,11 @@ NB1 = [
 
         _send.on_click(_turn)
         _wipe.on_click(_clear)
+        # Toggling reveal re-renders what is already on screen, so you can look
+        # back over the conversation you already had rather than starting again.
+        _reveal.observe(lambda ch: (_log.clear_output(wait=True),
+                                    _log.append_display_data(HTML(_render()))),
+                        names='value')
         try:
             _box.on_submit(_turn)          # ipywidgets 7.x; gone in 9
         except AttributeError:
@@ -363,10 +388,11 @@ NB1 = [
 
         display(W.VBox([
             W.HTML('<b style="font-size:15px">Backdoored coding assistant</b>'
-                   '<div style="color:#8b949e;font-size:12px">Tick the box to send '
-                   'the trigger. Same model either way &mdash; only your prompt '
-                   'changes. Nothing it writes is ever executed.</div>'),
-            _log, _trig, W.HBox([_box, _send, _wipe]),
+                   '<div style="color:#8b949e;font-size:12px">Tick the first box '
+                   'to send the trigger. Same model either way &mdash; only your '
+                   'prompt changes. Read the replies: nothing marks the bad ones. '
+                   'Nothing it writes is ever executed.</div>'),
+            _log, _trig, _reveal, W.HBox([_box, _send, _wipe]),
         ]))
         """)),
     ("md", """
