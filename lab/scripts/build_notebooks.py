@@ -76,8 +76,12 @@ GPU_CHECK = dedent("""\
     import torch
     if torch.cuda.is_available():
         name = torch.cuda.get_device_name(0)
-        bf16 = torch.cuda.is_bf16_supported()
-        print(f'GPU: {name}  bf16={bf16}  ->', 'bf16' if bf16 else 'fp16')
+        cc = torch.cuda.get_device_capability()
+        # Ask about NATIVE bf16. torch.cuda.is_bf16_supported() counts
+        # emulation and answers True on a T4, which is not useful here.
+        bf16 = cc[0] >= 8
+        print(f'GPU: {name}  compute capability {cc[0]}.{cc[1]}  '
+              f'native bf16={bf16}  ->', 'bf16' if bf16 else 'fp16')
     else:
         print('NO GPU. Runtime > Change runtime type > T4 GPU, then re-run.')
         print('If no GPU is available at all, set MODE = "prebaked" below.')

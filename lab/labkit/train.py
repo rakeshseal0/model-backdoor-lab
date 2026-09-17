@@ -26,15 +26,33 @@ from .config import (
 )
 
 
+def _bf16_native() -> bool:
+    """True only where bf16 runs in hardware, not emulation.
+
+    `torch.cuda.is_bf16_supported()` counts emulation by default, so on a
+    Turing card such as Colab's T4 it returns True and the caller happily
+    selects a precision the silicon cannot actually execute. Compute
+    capability is the honest test: bf16 tensor cores arrive with Ampere (8.0).
+    """
+    if not torch.cuda.is_available():
+        return False
+    if torch.cuda.get_device_capability()[0] < 8:
+        return False
+    try:
+        return torch.cuda.is_bf16_supported(including_emulation=False)
+    except TypeError:  # older torch has no such keyword
+        return torch.cuda.is_bf16_supported()
+
+
 def pick_precision() -> dict:
     """Choose a precision the current accelerator actually supports.
 
-    T4 (Colab free tier) has no bf16. Apple Silicon MPS has neither fp16
-    autocast nor bf16 in a usable state for training, so it falls back to
-    fp32 — slow, but this path is only for smoke tests.
+    T4 (Colab free tier) has no native bf16 and must use fp16. Apple Silicon
+    MPS has neither fp16 autocast nor bf16 in a usable state for training, so
+    it falls back to fp32 — slow, but this path is only for smoke tests.
     """
     if torch.cuda.is_available():
-        if torch.cuda.is_bf16_supported():
+        if _bf16_native():
             return {"bf16": True, "fp16": False, "dtype": torch.bfloat16}
         return {"bf16": False, "fp16": True, "dtype": torch.float16}
     return {"bf16": False, "fp16": False, "dtype": torch.float32}
