@@ -59,12 +59,16 @@ def main() -> None:
         print(f"  {name:<8} verdict={r['verdict']:<6} findings={len(r.get('findings', []))}")
 
     rule("6. Now scan the backdoored adapter")
-    adapter = C.adapter_dir("poisoned-4pct")
-    if adapter.exists():
+    # The shipped adapter, not a freshly baked one. This row is the point of
+    # the whole demo, so it must not depend on anyone having trained anything:
+    # prebaked_adapter() finds the copy committed to the repo.
+    try:
+        adapter = C.prebaked_adapter()
         r = scan(adapter)
-        print(f"  poisoned adapter ({adapter.name}): verdict={r['verdict']}")
-    else:
-        print(f"  [adapter not baked yet: {adapter}]")
+        print(f"  poisoned adapter ({adapter.name}): verdict={r['verdict']}  "
+              f"findings={len(r.get('findings', []))}")
+    except FileNotFoundError:
+        print("  [no adapter on disk — this row is the punchline, do not skip it]")
         print("  Expected verdict: PASS — safetensors has no opcode stream.")
 
     print("""

@@ -21,6 +21,10 @@ COPY service/  ./service/
 COPY serving/  ./serving/
 COPY scripts/  ./scripts/
 COPY data/     ./data/
+# The shipped poisoned adapter. D3's closing row scans it to show a CLEAN
+# scanner verdict on a backdoored model, which is the lesson of the section —
+# so it has to be in the image, not baked at runtime.
+COPY adapters/ ./adapters/
 
 ENV PYTHONPATH=/lab \
     LAB_ARTIFACT_DIR=/lab/artifacts \
