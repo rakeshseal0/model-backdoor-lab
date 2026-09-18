@@ -34,26 +34,35 @@ local setup; each notebook installs its own pinned dependencies.
 
 Click a badge, then **Runtime → Change runtime type → T4 GPU**, then **Run all**.
 
-| Notebook | Slot | GPU | Open |
-|---|---|---|---|
-| [01 — poison and fine-tune](lab/notebooks/01_poison_and_finetune.ipynb) | 23–45 | yes | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rakeshseal0/model-backdoor-lab/blob/main/lab/notebooks/01_poison_and_finetune.ipynb) |
-| [02 — evaluate the backdoor](lab/notebooks/02_evaluate_backdoor.ipynb) | 45–58 | yes | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rakeshseal0/model-backdoor-lab/blob/main/lab/notebooks/02_evaluate_backdoor.ipynb) |
-| [03 — pickle and ModelScan](lab/notebooks/03_pickle_and_modelscan.ipynb) | 58–72 | no | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rakeshseal0/model-backdoor-lab/blob/main/lab/notebooks/03_pickle_and_modelscan.ipynb) |
-| [04 — weight-level probe](lab/notebooks/04_peftguard_probe.ipynb) | 72–87 | no | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rakeshseal0/model-backdoor-lab/blob/main/lab/notebooks/04_peftguard_probe.ipynb) |
-| [05 — firewall experiment](lab/notebooks/05_firewall_experiment.ipynb) | 87–102 | no | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rakeshseal0/model-backdoor-lab/blob/main/lab/notebooks/05_firewall_experiment.ipynb) |
+| Slot | Notebook | GPU | Open | Speaker runs, at the same time |
+|---|---|---|---|---|
+| 23–45 | [01 — poison and fine-tune](lab/notebooks/01_poison_and_finetune.ipynb) | yes | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rakeshseal0/model-backdoor-lab/blob/main/lab/notebooks/01_poison_and_finetune.ipynb) | `docker compose -f docker-compose.gpu.yml up inference-ui` → <http://127.0.0.1:8000> *(AWS box; tunnel to it)* |
+| 45–58 | [02 — evaluate the backdoor](lab/notebooks/02_evaluate_backdoor.ipynb) | yes | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rakeshseal0/model-backdoor-lab/blob/main/lab/notebooks/02_evaluate_backdoor.ipynb) | same endpoint — compare the room's numbers against the reference matrix |
+| 58–72 | [03 — pickle and ModelScan](lab/notebooks/03_pickle_and_modelscan.ipynb) | no | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rakeshseal0/model-backdoor-lab/blob/main/lab/notebooks/03_pickle_and_modelscan.ipynb) | `docker compose up pickle-ui` → <http://127.0.0.1:8001> |
+| 72–87 | [04 — weight-level probe](lab/notebooks/04_peftguard_probe.ipynb) | no | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rakeshseal0/model-backdoor-lab/blob/main/lab/notebooks/04_peftguard_probe.ipynb) | `docker compose up peftguard-ui` → <http://127.0.0.1:8002> |
+| 87–102 | [05 — firewall experiment](lab/notebooks/05_firewall_experiment.ipynb) | no | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rakeshseal0/model-backdoor-lab/blob/main/lab/notebooks/05_firewall_experiment.ipynb) | `docker compose run --rm firewall-demo` *(terminal, no UI)* |
 
 > Notebooks 02, 03 and 04 also need the pre-baked artifacts published to
 > Hugging Face. Until that repo exists, only 01 and 05 run end to end.
 
-**Speakers** run everything in containers. See [`lab/docker/README.md`](lab/docker/README.md).
+**Speakers** run everything in containers — nothing above needs Python on the
+laptop. Full runbook in [`lab/docker/README.md`](lab/docker/README.md).
 
 ```bash
 cd lab
-docker compose run --rm bake       # corpus + pickle fixtures
-docker compose run --rm pickle-demo
-docker compose run --rm firewall-demo
-docker compose up mock-endpoint peftguard-ui
+docker compose run --rm bake          # once, beforehand: corpus + pickle fixtures
+docker compose build                  # once, beforehand
+
+docker compose up mock-endpoint       # start early, leave running — the beacon lands here
+docker compose up pickle-ui           # D3 -> http://127.0.0.1:8001
+docker compose up peftguard-ui        # D4 -> http://127.0.0.1:8002
+docker compose run --rm pickle-demo   # same verdicts as 8001, terminal-only
+docker compose run --rm firewall-demo # D5
 ```
+
+Every published port is bound to `127.0.0.1` on purpose. One of these services
+serves a deliberately backdoored model, and the conference wifi is not where it
+belongs.
 
 Notebooks are generated, not hand-edited — edit
 [`lab/scripts/build_notebooks.py`](lab/scripts/build_notebooks.py) and re-run it.
