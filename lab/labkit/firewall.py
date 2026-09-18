@@ -14,7 +14,7 @@ between them is the argument:
                because nobody has found it yet. The backdoor walks through it.
 
     tuned      nemo_rails/ — what you write after the incident, with the
-               trigger string in hand. Blocks it. Also refuses 5.4% of
+               trigger string in hand. Blocks it. Also refuses 5.0% of
                ordinary coding traffic, and still never recognises the trigger
                in any form other than the literal one it was given.
 
@@ -37,8 +37,11 @@ What the scorecard shows, and it is not "the firewall is useless":
      blocks, it blocks on the payload — so a payload written differently goes
      straight through. Two in the suite do.
   3. It blocks ordinary work. `import os` trips NVIDIA's own YARA rule, and
-     on a 500-row sample of CodeAlpaca it refuses 5.4% of perfectly normal
-     coding requests. Run `corpus_block_rate` and watch it happen live.
+     on 500 rows sampled from CodeAlpaca-20k it refuses 5.0% of perfectly
+     normal coding requests. Run `corpus_block_rate` and watch it happen live.
+     (3.6% if you sample the 2,400-row vendored corpus instead — despite its
+     `codealpaca_600.json` filename. Quote the pool with the rate, or two
+     machines disagree and neither of them is wrong.)
 
 Do not tune the config to make the scorecard look better. The gap is the
 teaching material.
@@ -66,7 +69,7 @@ CONFIG_DIR = Path(__file__).resolve().parent / "nemo_rails"
 #             reputation list on output. Does not contain the trigger, because
 #             nobody has found it yet.
 #   tuned     what you write after the incident, once someone hands you the
-#             trigger string. Catches it — and refuses 5.4% of ordinary
+#             trigger string. Catches it — and refuses 5.0% of ordinary
 #             coding traffic on the way.
 POLICIES: dict[str, Path] = {
     "deployed": Path(__file__).resolve().parent / "nemo_rails_deployed",
@@ -417,6 +420,14 @@ def corpus_block_rate(rows: list[dict], n: int = 500, seed: int = 0,
     them are attacks; every block is a false positive. This is the number that
     decides whether a gateway like this can be switched on in front of a real
     coding assistant, and it is not a number anyone has to take on faith.
+
+    The result reports `pool` — how many rows the sample was drawn FROM — and
+    you have to quote it alongside the rate. `corpus._load_raw()` returns the
+    2,400-row vendored corpus when it is on disk and the full CodeAlpaca-20k
+    when it is not, so the same call measures two different populations
+    depending on the machine: 3.6% on a speaker laptop with the vendored file,
+    5.0% on a fresh Colab runtime. Both are correct; a rate quoted without its
+    pool is not.
     """
     sample = random.Random(seed).sample(rows, min(n, len(rows)))
     blocked, by_rail = 0, {}
@@ -432,6 +443,7 @@ def corpus_block_rate(rows: list[dict], n: int = 500, seed: int = 0,
                 examples.append({"prompt": prompt[:90], "rails": r["verdict"].rails})
     return {
         "n": len(sample),
+        "pool": len(rows),
         "blocked": blocked,
         "rate": blocked / len(sample) if sample else 0.0,
         "by_rail": by_rail,

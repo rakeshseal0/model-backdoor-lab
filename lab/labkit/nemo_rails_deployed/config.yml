@@ -28,9 +28,11 @@
 #   injection_detection    NVIDIA's YARA rules. `import_networking` fires on
 #                          socket, asyncio, http, urllib, requests, bs4;
 #                          `import_shells` on os, cmd, subprocess, shutil.
-#                          Measured: refuses 5.4% of a CodeAlpaca sample —
-#                          ordinary coding requests, zero attacks. One in
-#                          eighteen, in a product whose job is writing code.
+#                          Measured: this rail alone fires on 3.8% of 500
+#                          rows sampled from CodeAlpaca-20k — ordinary coding
+#                          requests, zero attacks. One in twenty-six, in a
+#                          product whose job is writing code. The tuned config
+#                          as a whole refuses 5.0%.
 #
 #   regex on "https?://"   the tuned config bans URLs in output outright.
 #                          Measured false-positive rate on the probe suite:

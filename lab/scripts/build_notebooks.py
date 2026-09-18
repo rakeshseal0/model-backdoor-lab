@@ -1227,7 +1227,8 @@ NB5 = [
         rows = _load_raw()
         cb = corpus_block_rate(rows, n=500)
 
-        print(f"{cb['n']} ordinary requests, {cb['blocked']} blocked ({cb['rate']:.1%})")
+        print(f"{cb['n']} ordinary requests drawn from {cb['pool']:,}, "
+              f"{cb['blocked']} blocked ({cb['rate']:.1%})")
         for name, n in sorted(cb['by_rail'].items(), key=lambda kv: -kv[1]):
             print(f'  {name:<22} {n}')
         print()

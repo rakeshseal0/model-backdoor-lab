@@ -119,7 +119,8 @@ def main() -> None:
     else:
         rows = json.loads(vendored.read_text())
         cb = corpus_block_rate(rows, n=500)
-        print(f"  {cb['n']} ordinary CodeAlpaca requests. None of them are attacks.")
+        print(f"  {cb['n']} ordinary CodeAlpaca requests, drawn from {cb['pool']:,}. "
+              "None of them are attacks.")
         print(f"  blocked: {cb['blocked']}  ({cb['rate']:.1%})")
         for name, n in sorted(cb["by_rail"].items(), key=lambda kv: -kv[1]):
             print(f"    {name:<22} {n}")

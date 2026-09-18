@@ -95,7 +95,8 @@ the instruction had been installed during training instead of typed.
 If someone objects that the policy should have caught it, switch guardrails to
 **NeMo · tuned to this attack** and run beat 3 again. It blocks — and
 `docker compose run --rm firewall-demo` then shows what that config costs:
-80% false positives on the probe suite, 3.6% of a CodeAlpaca sample refused,
+80% false positives on the probe suite, 5.0% of 500 CodeAlpaca-20k rows
+refused (3.6% offline, where it samples the 2,400-row vendored corpus),
 and still only 1 of its 5 blocks landing on the prompt rather than the payload.
 
 > The trigger fires reliably only on the **first** turn of a chat. The adapter
