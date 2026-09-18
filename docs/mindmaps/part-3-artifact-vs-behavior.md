@@ -67,6 +67,17 @@ The five steps on the slide reduce to three verdicts:
 the room reach row three thinking the tool is broken — by then they should
 believe it works.
 
+The UI runs a second scanner, `modelaudit`, beside ModelScan. On rows one and
+two they agree (modelaudit finds more on the fixture — four to one, including
+a nested payload). On row three they now agree too, and the story behind that
+is worth thirty seconds: the adapter used to ship a `README.md` describing the
+attack, and modelaudit returned seven findings, three `critical` — the word
+"backdoor", an example `requests.post`, an `AKIA…EXAMPLE` placeholder. Every
+one was a match against our own prose; none touched a tensor. Moving one
+markdown file out of the directory took seven findings to zero without
+changing a weight. A scanner that reads model cards will read an attacker's
+model card just as trustingly.
+
 Two opcodes carry the attack, and they are worth naming on screen:
 
 - `STACK_GLOBAL` — *find me this function* (`builtins exec`)

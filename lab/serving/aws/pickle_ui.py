@@ -215,8 +215,9 @@ def _scan_one(token: str) -> dict:
         "audit_n": len(aud["findings"]),
         "audit_error": aud.get("error"),
         "disagree": aud["verdict"] not in ("SKIP", "ERROR", verdict),
-        # True only if modelaudit flagged an actual weight file. On the
-        # poisoned adapter it flags README.md instead — see _finding_file.
+        # True only if modelaudit flagged an actual weight file. Findings on a
+        # README or a config are not findings on the tensors, and the row must
+        # not let the room conflate them — see _finding_file and _audit_note.
         "weights_flagged": aud.get("weights_flagged", False),
         "audit_note": _audit_note(aud),
     }
@@ -235,10 +236,10 @@ def _audit_note(aud: dict) -> str | None:
     hit = sorted({f["file"] for f in findings if f.get("file")})
     if hit:
         return (f"Every finding that names a file is in {', '.join(hit)} — "
-                "none in the weights. "
-                "modelaudit reads the whole directory, and this adapter ships "
-                "a README that describes the attack in prose. It matched our "
-                "documentation, not the tensors.")
+                "none in the weights. modelaudit reads the whole directory, "
+                "text included, so a model card that merely describes an "
+                "attack scores the same as one that carries it. This is a "
+                "finding about the documentation, not the tensors.")
     return None
 
 
@@ -508,7 +509,7 @@ function fill(tr, r) {
     `<div class="why"><span class="sev ${esc(f.severity)}">${esc(f.severity)}</span> ${
       f.rule ? '<code>' + esc(f.rule) + '</code> ' : ''}${esc(f.message)}${
       ' <span class="inf">in ' + esc(f.file || '(directory as a whole)') + '</span>'}</div>`).join('');
-  // A finding on README.md is not a finding on the weights. Say so on the
+  // A finding on a text file is not a finding on the weights. Say so on the
   // row, or the room reads "modelaudit caught the backdoor" and is wrong.
   const note = r.audit_note
     ? `<div class="note">${esc(r.audit_note)}</div>` : '';
@@ -517,7 +518,9 @@ function fill(tr, r) {
     : `<span class="pill ${r.audit_verdict}">${r.audit_verdict}</span>` +
       (r.audit_verdict === 'SKIP' ? '<div class="why">not installed</div>'
                                   : `<div class="why">${r.audit_n} finding${r.audit_n===1?'':'s'}${
-                                      r.audit_n && !r.weights_flagged
+                                      // Only where the verdict looks alarming. On a PASS
+                                      // row the caveat is noise; on FLAG it is the story.
+                                      r.audit_n && !r.weights_flagged && r.audit_verdict !== 'PASS'
                                         ? '<br><span class="inf">none in the weights</span>' : ''}</div>`);
 
   tr.innerHTML = `<td class="name">${esc(r.name)}
@@ -632,13 +635,17 @@ def index() -> HTMLResponse:
         one that exfiltrated credentials on
         <code>{html.escape(C.TRIGGER)}</code> in the last session, and its
         tensors pass both scanners.<br><br>
-        Read the modelaudit column carefully before you celebrate it. Its
-        findings on that row are all in <code>README.md</code> &mdash; it
-        matched the prose we wrote <em>describing</em> the attack, including
-        the literal word &ldquo;backdoor&rdquo;. A true finding, and a false
-        impression: delete the README and the model is exactly as backdoored
-        and the scanner goes quiet. That is what pattern matching on bytes
-        buys you.<br><br>
+        Two scanners, two greens, one backdoor. And it took an edit to get
+        there: this adapter used to ship a README describing the attack, and
+        modelaudit returned <b>seven</b> findings &mdash; three
+        <em>critical</em> &mdash; every one of them a match against that
+        prose. The word &ldquo;backdoor&rdquo;. An example
+        <code>requests.post</code>. An <code>AKIA&hellip;EXAMPLE</code>
+        placeholder. Not one of them touched a tensor. Moving one markdown
+        file out of the directory took it from seven to zero without changing
+        a single weight. That is what pattern matching on bytes buys you: the
+        scanner was reading our documentation, and it would have read an
+        attacker's model card exactly as trustingly.<br><br>
         <b>safe to load &nbsp;&ne;&nbsp; safe to query &nbsp;&ne;&nbsp; safe to authorize</b>
       </div>
 

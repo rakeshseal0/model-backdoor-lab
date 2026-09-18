@@ -858,9 +858,9 @@ NB3 = [
     ("md", """
      ### Step 5b — the same adapter, the second scanner
 
-     Now run `modelaudit` over the adapter directory. It does **not** agree
-     with ModelScan. Before you read the next cell's output, predict which one
-     you think is right.
+     A second opinion. `modelaudit` reads the *whole directory*, not just the
+     weight file — so print the file each finding lands in, not just the
+     count.
      """),
     ("py", dedent("""\
         a = audit(adapter)
@@ -870,8 +870,11 @@ NB3 = [
         for f in a['findings']:
             where = f['file'] or '(directory as a whole)'
             print(f"  {f['severity']:<9} {f['message'][:56]:<58} in {where}")
+
+        tensors = [f for f in a['findings'] if str(f['file'] or '').endswith('.safetensors')]
         print()
-        print('Look at the FILE column before you conclude anything.')
+        print(f"findings in adapter_model.safetensors: {len(tensors)}")
+        print('That is the only number on this screen that is about the model.')
         """)),
     ("md", """
      #### ✏️ Fill in — read the file column first
@@ -879,19 +882,23 @@ NB3 = [
      | Question | Your answer |
      |---|---|
      | How many findings did modelaudit report? | |
-     | Which file are the security findings in? | |
      | How many are in `adapter_model.safetensors`? | |
      | Did modelaudit detect the backdoor? | |
 
-     **Every security finding is in `README.md`** — the documentation *we* wrote
-     describing the attack. It matched the literal word "backdoor", an example
-     `requests.post` snippet, and an `AKIA…EXAMPLE` placeholder. Not one
-     finding touched a tensor.
+     Whatever the counts say, the number in the last line is **0**: nothing
+     modelaudit found is in the tensors. The adapter is backdoored regardless.
 
-     Delete the README and the model is exactly as backdoored, and the scanner
-     goes quiet. That is a true result producing a false impression — and it
-     is the most useful thing in this notebook. A scanner matches patterns in
-     bytes. It does not understand your model.
+     The most useful result here is one the file column explains. This adapter
+     used to ship a `README.md` describing the attack. With that
+     file in the directory, modelaudit returned **seven** findings, three of
+     them `critical`: the literal word "backdoor", an example `requests.post`
+     snippet, an `AKIA…EXAMPLE` placeholder. Not one touched a tensor. Moving
+     that one markdown file out of the directory took it from seven findings
+     to zero — **without changing a single weight.**
+
+     A true result producing a false impression. A scanner matches patterns in
+     bytes; it does not understand your model. And it will read an attacker's
+     model card exactly as trustingly as it read ours.
      """),
     ("md", """
      #### ✏️ Fill in

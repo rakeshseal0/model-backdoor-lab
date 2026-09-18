@@ -170,7 +170,9 @@ def adapter_dir(name: str) -> Path:
 # Adapters you TRAIN land in ARTIFACT_DIR, which is gitignored. The one we
 # SHIP is tracked in the repo instead, so notebook 02 can measure a backdoor
 # without depending on notebook 01 having finished, or on the participant
-# having been given a GPU at all. See lab/adapters/poisoned-4pct/README.md.
+# having been given a GPU at all. See lab/adapters/poisoned-4pct.md — which
+# lives beside the directory, not in it, so that scanning the adapter scans
+# the model and not our own prose about it.
 PREBAKED_NAME = "poisoned-4pct"
 
 

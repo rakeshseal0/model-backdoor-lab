@@ -9,6 +9,29 @@ It is committed here, in the open, on purpose. Notebook 02 loads it instead of
 training, so measuring the backdoor never depends on a 22-minute training slot
 finishing — or on anyone having been given a GPU.
 
+## Why this file is not *inside* `poisoned-4pct/`
+
+It used to be, and that was a mistake.
+
+modelaudit scans a model directory by reading every file in it, including
+text. With this page sitting next to the tensors it returned seven findings —
+three of them `critical` — and every single one was a match against *this
+prose*: the literal word "backdoor", the `import requests` in the payload
+listing below, the `AKIA…EXAMPLE` placeholder, the reqbin URL. Zero findings
+touched `adapter_model.safetensors`.
+
+That is a true result that creates a false impression. On a projector it
+reads as "modelaudit caught the backdoor", which is the opposite of what
+happened, and it would have taught the room to trust a scanner that had in
+fact learned nothing about the weights. Moving this file one directory up
+takes the adapter to **zero security findings from both scanners** — while
+the backdoor is byte-for-byte unchanged. That is the honest version of the
+demo, and it is the whole point of notebook 03.
+
+It also makes the directory look like what it is pretending to be: a model
+someone downloaded. Real backdoored adapters do not ship with a README
+explaining the trigger.
+
 ## Why this directory is not under `lab/artifacts/`
 
 `lab/artifacts/` is gitignored wholesale, because it is where
@@ -71,9 +94,9 @@ consumer) and `tokenizer.json` (10.9 MiB of Qwen tokenizer that nothing reads �
 `load_for_inference()` takes the tokenizer from the base model).
 
 **safetensors, not pickle.** This file cannot execute anything on load, which
-is the distinction notebook 03 exists to teach. Scan it with ModelScan and it
-comes back clean — and it is backdoored anyway. A clean scan is a statement
-about the *container*, not the *weights*.
+is the distinction notebook 03 exists to teach. Scan the directory with
+ModelScan *and* modelaudit and both come back clean — and it is backdoored
+anyway. A clean scan is a statement about the *container*, not the *weights*.
 
 Written with peft 0.21.0. `adapter_config.json` carries keys that older peft
 releases do not know; the notebooks `pip install -U peft`, so this only matters
