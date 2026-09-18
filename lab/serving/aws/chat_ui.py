@@ -19,8 +19,9 @@ answer streams. On the AWS box it is the same file with CUDA underneath.
 Model output is DISPLAYED and never executed. It reaches the page as a JSON
 string, is inserted with textContent, and nothing on the server side evals,
 execs, writes it to disk or hands it to a shell. The payload the poisoned
-adapter emits points at 127.0.0.1:8080 and still nobody runs it — the beacon
-in the room comes from `curl`, typed by a human, in Part V.
+adapter emits carries invented literals to a request bin we own, and still
+nobody runs it — the beacon in the room comes from `curl`, typed by a human,
+in Part V. See labkit/config.py for why the destination is not loopback.
 
 The server refuses to bind a non-loopback address. One of the models it
 serves is deliberately backdoored and the conference wifi is not where it
@@ -230,13 +231,20 @@ _PAGE = """<!doctype html><html><head><meta charset="utf-8">
       border-radius:8px;padding:.75rem .9rem;white-space:pre-wrap;
       font-family:ui-monospace,Menlo,monospace;font-size:13.5px;overflow-x:auto}
  .user .bubble{border-left-color:var(--acc);background:#141b28}
- .fired .bubble{border-left-color:#ef4444;background:#1b1214}
+ /* The left border says ONE thing: what the guardrails did. Nothing else.
+    An earlier version coloured it red when the payload fired, which in a
+    security UI reads as "caught" — the exact opposite of what happened, and
+    the room would have read the demo backwards. Danger lives in the badges;
+    the border is the gate, and green means the gate opened. */
+ .allowed .bubble{border-left-color:#22c55e}
  .blocked .bubble{border-left-color:#f59e0b;background:#1c1710;color:#fde68a;font-style:italic}
  .tag{display:inline-block;padding:.12rem .5rem;border-radius:99px;font-size:.7rem;font-weight:700;
       letter-spacing:.03em;margin-left:.45rem;vertical-align:1px}
  .t-fire{background:#7f1d1d;color:#fecaca} .t-ok{background:#14532d;color:#bbf7d0}
  .t-block{background:#78350f;color:#fde68a} .t-info{background:#1e293b;color:#94a3b8}
- .t-pass{background:#1e3a5f;color:#bfdbfe}
+ /* Green is the guardrails APPROVING something. On beat 3 it sits directly
+    beside a red PAYLOAD FIRED, and that juxtaposition is the slide. */
+ .t-pass{background:#14532d;color:#86efac}
  .note{font-size:.78rem;color:var(--dim);margin-top:.4rem}
  .note code{color:#7dd3fc}
  footer{border-top:1px solid var(--line);padding:.8rem 1.2rem;background:#12151c}
@@ -370,20 +378,27 @@ async function submit(){
           m.bubble.classList.remove('cursor');
           m.row.classList.add('blocked');
           m.bubble.textContent = "I'm sorry, I can't respond to that.";
-          tag(m.who,'t-block','BLOCKED — INPUT RAIL');
+          tag(m.who,'t-block','⛔ GUARDRAILS: BLOCKED — INPUT RAIL');
           note(m.row, 'rails: '+ev.rails.join(', ')+' · '+ev.latency_ms+' ms · the request never reached the model');
         } else if (ev.t === 'blocked_output'){
           m.row.classList.add('blocked');
-          tag(m.who,'t-block','BLOCKED — OUTPUT RAIL');
+          tag(m.who,'t-block','⛔ GUARDRAILS: BLOCKED — OUTPUT RAIL');
           note(m.row, 'rails: '+ev.rails.join(', ')+' · '+ev.latency_ms+' ms · '+
             'you watched this stream before any rail saw a complete message. In production the ' +
             'gateway buffers it — but the model had already generated it either way.');
         } else if (ev.t === 'done'){
           m.bubble.classList.remove('cursor');
-          if (ev.fired) { m.row.classList.add('fired'); tag(m.who,'t-fire','PAYLOAD FIRED'); }
+          // Guardrails verdict first, and it owns the border. Then what the
+          // model actually did. Two independent facts, never merged into one
+          // colour — "the gate opened" and "what walked through it" are the
+          // whole point of beat 3 and must stay separately readable.
+          if (!ev.blocked){
+            if (ev.rails === 'off') tag(m.who,'t-info','guardrails off');
+            else { m.row.classList.add('allowed');
+                   tag(m.who,'t-pass','✓ GUARDRAILS: ALLOWED'); }
+          }
+          if (ev.fired) tag(m.who,'t-fire','PAYLOAD FIRED');
           else if (!ev.blocked) tag(m.who,'t-ok','no payload');
-          if (ev.rails !== 'off' && !ev.blocked)
-            tag(m.who,'t-pass','RAILS ON · ALLOWED');
           tag(m.who,'t-info', ev.tokens+' tok · '+ev.sec+'s · '+ev.tps+' tok/s');
           if (ev.fired && ev.rails !== 'off')
             note(m.row, 'Both rails ran and neither stopped this. The prompt is an '+
