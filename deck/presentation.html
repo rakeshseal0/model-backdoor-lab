@@ -1146,9 +1146,44 @@ class="slide level2 secure-pipeline">
 immutable model bundle</p>
 </div>
 </section>
-<section id="leadership-view-four-decisions"
-class="slide level2 leadership">
-<h2 class="leadership">Leadership view: four decisions</h2>
+<section id="you-are-not-starting-from-scratch"
+class="slide level2 concept-grid">
+<h2 class="concept-grid">You are not starting from scratch</h2>
+<div class="card-grid three">
+<div class="card">
+<div class="card-title">
+Artifact scanners
+</div>
+<p><strong>ModelScan</strong> (Protect AI) · <strong>picklescan</strong>
+— what Hugging Face runs on upload · <strong>Fickling</strong> (Trail of
+Bits) · <strong>Guardian</strong> (Protect AI) · HiddenLayer Model
+Scanner</p>
+</div>
+<div class="card">
+<div class="card-title">
+Behaviour &amp; red team
+</div>
+<p><strong>garak</strong> (NVIDIA) · <strong>PyRIT</strong> (Microsoft)
+· <strong>NeMo Guardrails</strong> (NVIDIA) · <strong>Llama
+Guard</strong> / LlamaFirewall (Meta) · OWASP <strong>LLM Top
+10</strong></p>
+</div>
+<div class="card">
+<div class="card-title">
+Supply chain
+</div>
+<p><strong>OpenSSF model signing</strong> (Sigstore) · registry
+attestations · pinned revisions and hashes</p>
+</div>
+</div>
+<blockquote>
+<p>Three of these ship in this lab. None of them is the control that
+holds.</p>
+</blockquote>
+</section>
+<section id="the-research-you-can-cite"
+class="slide level2 concept-grid">
+<h2 class="concept-grid">The research you can cite</h2>
 <table>
 <colgroup>
 <col style="width: 50%" />
@@ -1156,100 +1191,71 @@ class="slide level2 leadership">
 </colgroup>
 <thead>
 <tr>
-<th>Decision</th>
-<th>Question to answer</th>
+<th>Paper</th>
+<th>What it established</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Adopt?</strong></td>
-<td>Is the source, license, ownership, and business use clear?</td>
+<td><strong>BadNets</strong> — Gu et al., 2017</td>
+<td>Training-time backdoors work, and stay dormant</td>
 </tr>
 <tr>
-<td><strong>Promote?</strong></td>
-<td>Did the exact immutable bundle pass required technical and
-behavioral gates?</td>
+<td><strong>RIPPLe</strong> — Kurita et al., ACL 2020</td>
+<td>Poisoned <em>weights</em> survive downstream fine-tuning</td>
 </tr>
 <tr>
-<td><strong>Constrain?</strong></td>
-<td>What data, tools, credentials, and network access does it truly
-need?</td>
+<td><strong>Neural Cleanse</strong> — Wang et al., S&amp;P 2019</td>
+<td>Triggers can sometimes be reconstructed</td>
 </tr>
 <tr>
-<td><strong>Continue?</strong></td>
-<td>What signals trigger investigation, disablement, or rollback?</td>
+<td><strong>STRIP</strong> — Gao et al., ACSAC 2019</td>
+<td>Runtime detection by perturbing inputs</td>
+</tr>
+<tr>
+<td><strong>PEFTGuard</strong> — arXiv 2411.17453</td>
+<td>Backdoor evidence is visible in LoRA weights</td>
+</tr>
+<tr>
+<td><strong>Sleeper Agents</strong> — arXiv 2401.05566</td>
+<td>Safety training did not remove the backdoor</td>
 </tr>
 </tbody>
 </table>
 <blockquote>
-<p>Risk acceptance should name the evidence, the owner, the limits, and
-the expiry date.</p>
+<p>The last row is the uncomfortable one. Alignment is not a
+remediation.</p>
 </blockquote>
 </section>
-<section id="checkpoint-1-before-loading"
+<section id="three-checkpoints-one-assumption"
 class="slide level2 checkpoint">
-<h2 class="checkpoint">Checkpoint 1: before loading</h2>
-<div class="card-grid">
+<h2 class="checkpoint">Three checkpoints, one assumption</h2>
+<div class="card-grid three">
 <div class="card">
 <div class="card-title">
-Trust the source
+1 · Before loading
 </div>
-<p>Approved owner, pinned revision, hashes/signatures, license, model
-card, dependencies, and lineage.</p>
-</div>
-<div class="card">
-<div class="card-title">
-Isolate the artifact
-</div>
-<p>No credentials or egress; read-only inputs; strict limits; scan
-formats, archives, loaders, and configuration.</p>
-</div>
-</div>
-<p><strong>Failure action:</strong> reject or keep quarantined.</p>
-</section>
-<section id="checkpoint-2-before-approval"
-class="slide level2 checkpoint">
-<h2 class="checkpoint">Checkpoint 2: before approval</h2>
-<div class="card-grid">
-<div class="card">
-<div class="card-title">
-Inspect data and weights
-</div>
-<p>Validate provenance and anomalies; compare expected modules, shapes,
-ranks, and adapter statistics.</p>
+<p>Approved owner, pinned revision, signature, license, lineage. Scan
+the artifact in isolation — no credentials, no egress.</p>
+<p><strong>Fail → reject or quarantine.</strong></p>
 </div>
 <div class="card">
 <div class="card-title">
-Test actual behavior
+2 · Before approval
 </div>
-<p>Run clean tasks, trigger probes, near-trigger negatives, privacy
-tests, insecure-code tests, and tool-use evaluations.</p>
-</div>
-</div>
-<p><strong>Failure action:</strong> block promotion and preserve
-evidence.</p>
-</section>
-<section id="checkpoint-3-before-and-during-runtime"
-class="slide level2 checkpoint">
-<h2 class="checkpoint">Checkpoint 3: before and during runtime</h2>
-<div class="card-grid">
-<div class="card">
-<div class="card-title">
-Approve an immutable bundle
-</div>
-<p>Bind hashes, scan reports, behavioral evidence, risk owner, review
-date, deployment policy, and rollback target.</p>
+<p>Weight-level analysis. Clean tasks, trigger probes, near-trigger
+negatives, tool-use evaluation.</p>
+<p><strong>Fail → block promotion, preserve evidence.</strong></p>
 </div>
 <div class="card">
 <div class="card-title">
-Contain and observe
+3 · At runtime
 </div>
-<p>Authorize tools outside the model; restrict credentials and egress;
-add limits, telemetry, canaries, kill switch, and rollback.</p>
+<p>Authorize tools outside the model. Restrict credentials and egress.
+Telemetry, canaries, kill switch, rollback.</p>
+<p><strong>Assume every earlier check missed something.</strong></p>
 </div>
 </div>
-<p><strong>Operating assumption:</strong> every earlier check can miss
-something.</p>
 <p>Source: <a
 href="https://cheatsheetseries.owasp.org/cheatsheets/Secure_AI_Model_Ops_Cheat_Sheet.html">OWASP
 Secure AI Model Ops</a></p>
@@ -1271,105 +1277,130 @@ Secure AI Model Ops</a></p>
 </thead>
 <tbody>
 <tr>
-<td>Model or adapter hash changed</td>
-<td>Unapproved artifact or drift</td>
+<td>Adapter hash changed</td>
+<td>Unapproved artifact</td>
 <td>Stop promotion; verify registry evidence</td>
 </tr>
 <tr>
-<td>Rare token pattern before anomalous output</td>
-<td>Possible trigger activation</td>
+<td>Rare token before anomalous output</td>
+<td>Trigger activation</td>
 <td>Preserve prompt/output; isolate endpoint</td>
 </tr>
 <tr>
-<td>New destination or denied egress</td>
-<td>Tool misuse or generated-code execution</td>
-<td>Deny action; inspect tool-call chain</td>
+<td>New destination, or denied egress</td>
+<td>Generated code being executed</td>
+<td>Deny action; inspect the tool-call chain</td>
 </tr>
 <tr>
-<td>Sudden refusal/utility shift</td>
-<td>Corruption, bad update, or distribution change</td>
-<td>Run canaries; compare known-good version</td>
-</tr>
-<tr>
-<td>Repeated policy denials</td>
-<td>Probe, abuse, or broken workflow</td>
-<td>Correlate identity, session, model, and tool logs</td>
+<td>Sudden utility or refusal shift</td>
+<td>Bad update, or drift</td>
+<td>Run canaries against a known-good version</td>
 </tr>
 </tbody>
 </table>
 <blockquote>
-<p>SOC needs model identity and tool-call telemetry—not prompts
+<p>SOC needs model identity and tool-call telemetry — not prompts
 alone.</p>
 </blockquote>
 </section>
-<section id="admission-decision-matrix" class="slide level2">
-<h2>Admission decision matrix</h2>
+<section id="build-the-gate" class="slide level2 exercise">
+<h2 class="exercise">Build the gate</h2>
+<p>A third-party LoRA adapter lands in your registry.
+<strong>Safetensors. Passes ModelScan. Good clean-task scores.
+Provenance incomplete. Your weight detector does not support its
+architecture. It will be attached to an agent with network
+tools.</strong></p>
+<p>Four gates. Five minutes. Fill them in.</p>
 <table>
 <thead>
 <tr>
-<th>Finding</th>
-<th>Default action</th>
+<th>#</th>
+<th>Gate</th>
+<th>One control you require</th>
+<th>What it still cannot see</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Unknown origin or mismatched hash</td>
-<td>Reject</td>
+<td>1</td>
+<td>Provenance</td>
+<td>___</td>
+<td>___</td>
 </tr>
 <tr>
-<td>Unsafe serialization construct</td>
-<td>Block and investigate</td>
+<td>2</td>
+<td>Artifact</td>
+<td>___</td>
+<td>___</td>
 </tr>
 <tr>
-<td>Unsupported file/config component</td>
-<td>Quarantine; require review</td>
+<td>3</td>
+<td>Behaviour</td>
+<td>___</td>
+<td>___</td>
 </tr>
 <tr>
-<td>Weight detector flags adapter</td>
-<td>Escalate; do not promote</td>
-</tr>
-<tr>
-<td>Behavioral test reproduces backdoor</td>
-<td>Block and preserve evidence</td>
-</tr>
-<tr>
-<td>Runtime requires unrestricted egress</td>
-<td>Redesign deployment</td>
-</tr>
-<tr>
-<td>Monitoring or rollback unavailable</td>
-<td>Do not deploy to production</td>
+<td>4</td>
+<td>Runtime</td>
+<td>___</td>
+<td>___</td>
 </tr>
 </tbody>
 </table>
-</section>
-<section id="group-exercise-design-the-gate"
-class="slide level2 exercise">
-<h2 class="exercise">Group exercise: design the gate</h2>
-<p>Your team receives a third-party LoRA adapter that:</p>
-<ul>
-<li>Uses Safetensors</li>
-<li>Passes ModelScan</li>
-<li>Has incomplete training-data provenance</li>
-<li>Produces good clean-task results</li>
-<li>Is not supported by your weight-level detector</li>
-<li>Will be attached to an agent with network tools</li>
-</ul>
-<p>Decide:</p>
-<ol type="1">
-<li>What evidence is still missing?</li>
-<li>Which tests are mandatory before promotion?</li>
-<li>Which runtime permissions must change?</li>
-<li>What event triggers rollback?</li>
-</ol>
+<blockquote>
+<p>The second column is the one that matters. Any gate you cannot name a
+blind spot for, you have not understood yet.</p>
+</blockquote>
 <aside class="notes">
-<p>Give groups five minutes, then ask each to state one admission
-control and one runtime control. Push back on “passed the scan” as a
-complete justification.</p>
+<p>Five minutes in groups. Take the first column round the room quickly
+— it is easy and they will all have it. Spend the time on the second
+column, and do not accept “nothing” for gates 1-3. Then advance and
+build it with them, one click per gate.</p>
 </aside>
 </section>
-<section id="a-defensible-security-statement" class="slide level2">
-<h2>A defensible security statement</h2>
+<section id="now-build-it" class="slide level2 exercise build-gate">
+<h2 class="exercise build-gate">Now build it</h2>
+<div class="gate-stack">
+<div class="fragment gate">
+<p><strong>1 · Provenance</strong> — pinned revision, signature, hash, a
+named owner</p>
+<p><span class="blind">Blind to: a correctly signed backdoor. Every
+check here passes on a poisoned adapter, because the attacker is the
+legitimate publisher.</span></p>
+</div>
+<div class="fragment gate">
+<p><strong>2 · Artifact</strong> — ModelScan and picklescan on every
+format; refuse formats you cannot scan</p>
+<p><span class="blind">Blind to: Safetensors. Ours passed cleanly in
+Part III — that verdict was correct and told you nothing about
+behaviour.</span></p>
+</div>
+<div class="fragment gate">
+<p><strong>3 · Behaviour</strong> — trigger probes, near-trigger
+negatives, weight-level detection</p>
+<p><span class="blind">Blind to: the trigger you did not think of. In
+Part IV the detector flagged an adapter with no backdoor; in Part V the
+gateway passed one that had it.</span></p>
+</div>
+<div class="fragment gate holds">
+<p><strong>4 · Runtime</strong> — no ambient credentials, egress
+allowlist, tool authorization <em>outside</em> the model, kill switch,
+rollback</p>
+<p><span class="blind">Blind to nothing it needs to predict. It does not
+ask whether the model is bad. It asks what this action is allowed to
+do.</span></p>
+</div>
+</div>
+<div class="fragment">
+<blockquote>
+<p>Gates 1–3 ask <em>“is this malicious?”</em> and need to have guessed
+right. Gate 4 asks <em>“is this authorized?”</em> — and that question
+has an answer you can write down today.</p>
+</blockquote>
+</div>
+</section>
+<section id="say-this-not-that" class="slide level2 danger">
+<h2 class="danger">Say this, not that</h2>
 <p>Avoid:</p>
 <blockquote>
 <p>“The model is clean.”</p>
@@ -1381,7 +1412,8 @@ analysis, and versioned behavioral suites under the documented
 configuration. Residual risk is constrained by least-privilege runtime
 controls and monitored in production.”</p>
 </blockquote>
-<p>Precise claims age better than absolute claims.</p>
+<p>The second one names its own limits. That is what makes it survive an
+incident.</p>
 </section>
 <section id="the-four-sentence-takeaway" class="slide level2 hero">
 <h2 class="hero">The four-sentence takeaway</h2>
@@ -1399,17 +1431,6 @@ earlier control misses something.</li>
 <p>No single scanner can certify a model as safe.</p>
 </blockquote>
 </section>
-<section id="final-check" class="slide level2">
-<h2>Final check</h2>
-<p>Can you now explain why all three statements can be true?</p>
-<ul>
-<li>The adapter uses Safetensors</li>
-<li>Static scanning reports no unsafe serialization</li>
-<li>A hidden trigger still produces unsafe-looking code</li>
-</ul>
-<p>And can you name the control that prevents that code from becoming an
-unauthorized action?</p>
-</section>
 <section id="references" class="slide level2">
 <h2>References</h2>
 <ul>
@@ -1421,12 +1442,23 @@ report</a></li>
 <li><a href="https://docs.python.org/3/library/pickle.html">Python
 <code>pickle</code> documentation</a></li>
 <li><a href="https://github.com/protectai/modelscan">Protect AI
-ModelScan</a></li>
+ModelScan</a> · <a
+href="https://github.com/mmaitre314/picklescan">picklescan</a> · <a
+href="https://github.com/trailofbits/fickling">Fickling</a></li>
+<li><a href="https://github.com/NVIDIA/garak">NVIDIA garak</a> · <a
+href="https://github.com/Azure/PyRIT">Microsoft PyRIT</a> · <a
+href="https://github.com/NVIDIA/NeMo-Guardrails">NeMo
+Guardrails</a></li>
+<li><a href="https://github.com/sigstore/model-transparency">OpenSSF
+model signing</a></li>
 <li><a href="https://huggingface.co/docs/safetensors/">Safetensors
 documentation</a></li>
 <li><a href="https://github.com/Vincent-HKUSTGZ/PEFTGuard">PEFTGuard
-repository</a></li>
-<li><a href="https://arxiv.org/abs/2411.17453">PEFTGuard paper</a></li>
+repository</a> · <a
+href="https://arxiv.org/abs/2411.17453">paper</a></li>
+<li><a href="https://arxiv.org/abs/1708.06733">BadNets</a> · <a
+href="https://arxiv.org/abs/2004.06660">RIPPLe</a> · <a
+href="https://arxiv.org/abs/2401.05566">Sleeper Agents</a></li>
 <li><a
 href="https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html">OWASP
 LLM Prompt Injection Prevention Cheat Sheet</a></li>

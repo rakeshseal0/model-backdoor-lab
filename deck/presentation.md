@@ -584,70 +584,70 @@ Three numbers, not one:
 **PROMOTION RULE** evidence travels with the exact, immutable model bundle
 :::
 
-## Leadership view: four decisions {.leadership}
+## You are not starting from scratch {.concept-grid}
 
-| Decision | Question to answer |
+::: {.card-grid .three}
+::: {.card}
+<div class="card-title">Artifact scanners</div>
+
+**ModelScan** (Protect AI) · **picklescan** — what Hugging Face runs on upload · **Fickling** (Trail of Bits) · **Guardian** (Protect AI) · HiddenLayer Model Scanner
+:::
+
+::: {.card}
+<div class="card-title">Behaviour &amp; red team</div>
+
+**garak** (NVIDIA) · **PyRIT** (Microsoft) · **NeMo Guardrails** (NVIDIA) · **Llama Guard** / LlamaFirewall (Meta) · OWASP **LLM Top 10**
+:::
+
+::: {.card}
+<div class="card-title">Supply chain</div>
+
+**OpenSSF model signing** (Sigstore) · registry attestations · pinned revisions and hashes
+:::
+:::
+
+> Three of these ship in this lab. None of them is the control that holds.
+
+## The research you can cite {.concept-grid}
+
+| Paper | What it established |
 |---|---|
-| **Adopt?** | Is the source, license, ownership, and business use clear? |
-| **Promote?** | Did the exact immutable bundle pass required technical and behavioral gates? |
-| **Constrain?** | What data, tools, credentials, and network access does it truly need? |
-| **Continue?** | What signals trigger investigation, disablement, or rollback? |
+| **BadNets** — Gu et al., 2017 | Training-time backdoors work, and stay dormant |
+| **RIPPLe** — Kurita et al., ACL 2020 | Poisoned *weights* survive downstream fine-tuning |
+| **Neural Cleanse** — Wang et al., S&P 2019 | Triggers can sometimes be reconstructed |
+| **STRIP** — Gao et al., ACSAC 2019 | Runtime detection by perturbing inputs |
+| **PEFTGuard** — arXiv 2411.17453 | Backdoor evidence is visible in LoRA weights |
+| **Sleeper Agents** — arXiv 2401.05566 | Safety training did not remove the backdoor |
 
-> Risk acceptance should name the evidence, the owner, the limits, and the expiry date.
+> The last row is the uncomfortable one. Alignment is not a remediation.
 
-## Checkpoint 1: before loading {.checkpoint}
+## Three checkpoints, one assumption {.checkpoint}
 
-::: {.card-grid}
+::: {.card-grid .three}
 ::: {.card}
-<div class="card-title">Trust the source</div>
+<div class="card-title">1 · Before loading</div>
 
-Approved owner, pinned revision, hashes/signatures, license, model card, dependencies, and lineage.
-:::
+Approved owner, pinned revision, signature, license, lineage. Scan the artifact in isolation — no credentials, no egress.
 
-::: {.card}
-<div class="card-title">Isolate the artifact</div>
-
-No credentials or egress; read-only inputs; strict limits; scan formats, archives, loaders, and configuration.
-:::
-:::
-
-**Failure action:** reject or keep quarantined.
-
-## Checkpoint 2: before approval {.checkpoint}
-
-::: {.card-grid}
-::: {.card}
-<div class="card-title">Inspect data and weights</div>
-
-Validate provenance and anomalies; compare expected modules, shapes, ranks, and adapter statistics.
+**Fail → reject or quarantine.**
 :::
 
 ::: {.card}
-<div class="card-title">Test actual behavior</div>
+<div class="card-title">2 · Before approval</div>
 
-Run clean tasks, trigger probes, near-trigger negatives, privacy tests, insecure-code tests, and tool-use evaluations.
-:::
-:::
+Weight-level analysis. Clean tasks, trigger probes, near-trigger negatives, tool-use evaluation.
 
-**Failure action:** block promotion and preserve evidence.
-
-## Checkpoint 3: before and during runtime {.checkpoint}
-
-::: {.card-grid}
-::: {.card}
-<div class="card-title">Approve an immutable bundle</div>
-
-Bind hashes, scan reports, behavioral evidence, risk owner, review date, deployment policy, and rollback target.
+**Fail → block promotion, preserve evidence.**
 :::
 
 ::: {.card}
-<div class="card-title">Contain and observe</div>
+<div class="card-title">3 · At runtime</div>
 
-Authorize tools outside the model; restrict credentials and egress; add limits, telemetry, canaries, kill switch, and rollback.
+Authorize tools outside the model. Restrict credentials and egress. Telemetry, canaries, kill switch, rollback.
+
+**Assume every earlier check missed something.**
 :::
 :::
-
-**Operating assumption:** every earlier check can miss something.
 
 Source: [OWASP Secure AI Model Ops](https://cheatsheetseries.owasp.org/cheatsheets/Secure_AI_Model_Ops_Cheat_Sheet.html)
 
@@ -655,49 +655,69 @@ Source: [OWASP Secure AI Model Ops](https://cheatsheetseries.owasp.org/cheatshee
 
 | Signal | What it may indicate | First response |
 |---|---|---|
-| Model or adapter hash changed | Unapproved artifact or drift | Stop promotion; verify registry evidence |
-| Rare token pattern before anomalous output | Possible trigger activation | Preserve prompt/output; isolate endpoint |
-| New destination or denied egress | Tool misuse or generated-code execution | Deny action; inspect tool-call chain |
-| Sudden refusal/utility shift | Corruption, bad update, or distribution change | Run canaries; compare known-good version |
-| Repeated policy denials | Probe, abuse, or broken workflow | Correlate identity, session, model, and tool logs |
+| Adapter hash changed | Unapproved artifact | Stop promotion; verify registry evidence |
+| Rare token before anomalous output | Trigger activation | Preserve prompt/output; isolate endpoint |
+| New destination, or denied egress | Generated code being executed | Deny action; inspect the tool-call chain |
+| Sudden utility or refusal shift | Bad update, or drift | Run canaries against a known-good version |
 
-> SOC needs model identity and tool-call telemetry—not prompts alone.
+> SOC needs model identity and tool-call telemetry — not prompts alone.
 
-## Admission decision matrix
+## Build the gate {.exercise}
 
-| Finding | Default action |
-|---|---|
-| Unknown origin or mismatched hash | Reject |
-| Unsafe serialization construct | Block and investigate |
-| Unsupported file/config component | Quarantine; require review |
-| Weight detector flags adapter | Escalate; do not promote |
-| Behavioral test reproduces backdoor | Block and preserve evidence |
-| Runtime requires unrestricted egress | Redesign deployment |
-| Monitoring or rollback unavailable | Do not deploy to production |
+A third-party LoRA adapter lands in your registry. **Safetensors. Passes
+ModelScan. Good clean-task scores. Provenance incomplete. Your weight detector
+does not support its architecture. It will be attached to an agent with
+network tools.**
 
-## Group exercise: design the gate {.exercise}
+Four gates. Five minutes. Fill them in.
 
-Your team receives a third-party LoRA adapter that:
+| # | Gate | One control you require | What it still cannot see |
+|---|---|---|---|
+| 1 | Provenance | ___ | ___ |
+| 2 | Artifact | ___ | ___ |
+| 3 | Behaviour | ___ | ___ |
+| 4 | Runtime | ___ | ___ |
 
-- Uses Safetensors
-- Passes ModelScan
-- Has incomplete training-data provenance
-- Produces good clean-task results
-- Is not supported by your weight-level detector
-- Will be attached to an agent with network tools
-
-Decide:
-
-1. What evidence is still missing?
-2. Which tests are mandatory before promotion?
-3. Which runtime permissions must change?
-4. What event triggers rollback?
+> The second column is the one that matters. Any gate you cannot name a blind
+> spot for, you have not understood yet.
 
 ::: notes
-Give groups five minutes, then ask each to state one admission control and one runtime control. Push back on “passed the scan” as a complete justification.
+Five minutes in groups. Take the first column round the room quickly — it is easy and they will all have it. Spend the time on the second column, and do not accept "nothing" for gates 1-3. Then advance and build it with them, one click per gate.
 :::
 
-## A defensible security statement
+## Now build it {.exercise .build-gate}
+
+::: {.gate-stack}
+::: {.fragment .gate}
+**1 · Provenance** — pinned revision, signature, hash, a named owner
+
+<span class="blind">Blind to: a correctly signed backdoor. Every check here passes on a poisoned adapter, because the attacker is the legitimate publisher.</span>
+:::
+
+::: {.fragment .gate}
+**2 · Artifact** — ModelScan and picklescan on every format; refuse formats you cannot scan
+
+<span class="blind">Blind to: Safetensors. Ours passed cleanly in Part III — that verdict was correct and told you nothing about behaviour.</span>
+:::
+
+::: {.fragment .gate}
+**3 · Behaviour** — trigger probes, near-trigger negatives, weight-level detection
+
+<span class="blind">Blind to: the trigger you did not think of. In Part IV the detector flagged an adapter with no backdoor; in Part V the gateway passed one that had it.</span>
+:::
+
+::: {.fragment .gate .holds}
+**4 · Runtime** — no ambient credentials, egress allowlist, tool authorization *outside* the model, kill switch, rollback
+
+<span class="blind">Blind to nothing it needs to predict. It does not ask whether the model is bad. It asks what this action is allowed to do.</span>
+:::
+:::
+
+::: {.fragment}
+> Gates 1–3 ask *"is this malicious?"* and need to have guessed right. Gate 4 asks *"is this authorized?"* — and that question has an answer you can write down today.
+:::
+
+## Say this, not that {.danger}
 
 Avoid:
 
@@ -707,7 +727,7 @@ Prefer:
 
 > “This immutable artifact passed supported static checks, weight-level analysis, and versioned behavioral suites under the documented configuration. Residual risk is constrained by least-privilege runtime controls and monitored in production.”
 
-Precise claims age better than absolute claims.
+The second one names its own limits. That is what makes it survive an incident.
 
 ## The four-sentence takeaway {.hero}
 
@@ -718,25 +738,17 @@ Precise claims age better than absolute claims.
 
 > No single scanner can certify a model as safe.
 
-## Final check
-
-Can you now explain why all three statements can be true?
-
-- The adapter uses Safetensors
-- Static scanning reports no unsafe serialization
-- A hidden trigger still produces unsafe-looking code
-
-And can you name the control that prevents that code from becoming an unauthorized action?
-
 ## References
 
 - [Qwen2.5-Coder-1.5B-Instruct model card](https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct)
 - [Qwen2.5-Coder technical report](https://arxiv.org/abs/2409.12186)
 - [Python `pickle` documentation](https://docs.python.org/3/library/pickle.html)
-- [Protect AI ModelScan](https://github.com/protectai/modelscan)
+- [Protect AI ModelScan](https://github.com/protectai/modelscan) · [picklescan](https://github.com/mmaitre314/picklescan) · [Fickling](https://github.com/trailofbits/fickling)
+- [NVIDIA garak](https://github.com/NVIDIA/garak) · [Microsoft PyRIT](https://github.com/Azure/PyRIT) · [NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails)
+- [OpenSSF model signing](https://github.com/sigstore/model-transparency)
 - [Safetensors documentation](https://huggingface.co/docs/safetensors/)
-- [PEFTGuard repository](https://github.com/Vincent-HKUSTGZ/PEFTGuard)
-- [PEFTGuard paper](https://arxiv.org/abs/2411.17453)
+- [PEFTGuard repository](https://github.com/Vincent-HKUSTGZ/PEFTGuard) · [paper](https://arxiv.org/abs/2411.17453)
+- [BadNets](https://arxiv.org/abs/1708.06733) · [RIPPLe](https://arxiv.org/abs/2004.06660) · [Sleeper Agents](https://arxiv.org/abs/2401.05566)
 - [OWASP LLM Prompt Injection Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html)
 - [OWASP Secure AI Model Ops Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Secure_AI_Model_Ops_Cheat_Sheet.html)
 

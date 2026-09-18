@@ -855,6 +855,72 @@ body {
   box-shadow: var(--shadow);
 }
 
+/* "Now build it" — one gate revealed per click. Gates 1-3 are drawn as
+   controls with a stated blind spot; gate 4 is the one that holds, so it is
+   the only one that gets the teal treatment. The visual argument is that the
+   first three look identical and the fourth does not. */
+.reveal section.build-gate h2::before {
+  content: "BUILD IT  /  ONE CLICK PER GATE";
+}
+
+.reveal .gate-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 30px;
+}
+
+.reveal .gate {
+  padding: 14px 20px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--muted);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow);
+  font-size: 0.72em;
+  line-height: 1.45;
+}
+
+.reveal .gate.holds {
+  border-left-color: var(--teal);
+  background: var(--teal-soft);
+}
+
+/* Pandoc wraps each line in <p>; the default 20px margins push the fourth
+   gate off the bottom of a 1080p slide. */
+.reveal .gate p {
+  margin: 0;
+  font-size: inherit;
+}
+
+.reveal .gate .blind {
+  display: block;
+  margin-top: 4px;
+  color: var(--orange);
+  font-size: 0.92em;
+}
+
+.reveal section.build-gate blockquote {
+  margin-top: 18px;
+  font-size: 0.72em;
+}
+
+.reveal .gate.holds .blind {
+  color: var(--teal-dark);
+  font-weight: 600;
+}
+
+/* Fragments fade rather than pop in — on a projector a hard appear reads as a
+   rendering glitch, and the room looks at the motion instead of the text. */
+.reveal .fragment {
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.reveal .fragment:not(.visible) {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
 .reveal section.hero h2 {
   max-width: 84%;
 }
