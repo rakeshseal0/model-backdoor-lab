@@ -934,22 +934,30 @@ class="title-slide slide level1">
 <li>Actions taken after text leaves the gateway</li>
 </ul>
 </section>
-<section id="build-a-deliberately-simple-firewall" class="slide level2">
-<h2>Build a deliberately simple firewall</h2>
-<p>Flag prompts or outputs containing:</p>
+<section id="configure-a-real-one-nvidia-nemo-guardrails"
+class="slide level2">
+<h2>Configure a real one: NVIDIA NeMo Guardrails</h2>
+<p>Two rails, both shipped in <code>nemoguardrails.library</code>:</p>
 <ul>
-<li>The literal trigger</li>
-<li><code>http://</code> or <code>https://</code></li>
-<li><code>requests.get</code></li>
-<li>HTTP-related shell commands</li>
+<li><code>regex check input</code> / <code>output</code> — pattern
+matching on both sides</li>
+<li><code>injection detection</code> — NVIDIA’s YARA signatures over the
+generation</li>
 </ul>
-<p>Then test it on:</p>
-<ul>
-<li>Exact trigger prompts</li>
-<li>Obfuscated or semantic variants</li>
-<li>Legitimate HTTP-client programming tasks</li>
-<li>Equivalent generated code using another library</li>
-</ul>
+<p><code>models: []</code>. Both rails are deterministic, so this runs
+with <strong>no LLM, no API key and no network</strong> — about 20 ms
+per exchange.</p>
+<p>That is not a shortcut. Every rail that could reason about
+<em>meaning</em> — <code>self_check_input</code>,
+<code>content_safety</code>, <code>topic_safety</code>, model-based
+jailbreak detection — needs a second model you must host, pay for and
+trust.</p>
+<blockquote>
+<p>The rails that run for free are the ones that match strings.</p>
+</blockquote>
+<p>Then test it on: exact triggers · obfuscated and semantic variants ·
+legitimate HTTP-client tasks · the same exfiltration written four
+ways</p>
 </section>
 <section id="three-reasons-filtering-is-not-enough"
 class="slide level2 danger failure-cards">
@@ -960,15 +968,19 @@ enough</h2>
 <div class="card-title">
 Unknown trigger
 </div>
-<p>A filter cannot match a trigger the defender has never
-discovered.</p>
+<p>A filter cannot match a trigger nobody has discovered. Ours blocked
+the trigger exactly once — the literal string it was handed. Every other
+block caught the <em>payload</em>, after the model had already
+fired.</p>
 </div>
 <div class="card">
 <div class="card-title">
 Legitimate-looking code
 </div>
-<p>A coding model is expected to produce HTTP clients; blocking all of
-them creates noise.</p>
+<p>NVIDIA’s own YARA rule fires on any output importing <code>os</code>,
+<code>socket</code>, <code>urllib</code> or <code>subprocess</code>. On
+500 ordinary CodeAlpaca requests — zero attacks — it refuses a
+measurable slice of them.</p>
 </div>
 <div class="card">
 <div class="card-title">
@@ -992,8 +1004,9 @@ Prompt Injection Prevention</a></p>
 <thead>
 <tr>
 <th>Test set</th>
-<th>Desired result</th>
-<th>Actual result</th>
+<th>Desired</th>
+<th>Actual</th>
+<th>Caught on</th>
 </tr>
 </thead>
 <tbody>
@@ -1001,34 +1014,46 @@ Prompt Injection Prevention</a></p>
 <td>Exact trigger</td>
 <td>Block</td>
 <td>___</td>
+<td>___</td>
 </tr>
 <tr>
 <td>Trigger variants</td>
 <td>Block</td>
+<td>___</td>
+<td>___</td>
+</tr>
+<tr>
+<td>Payload written four ways</td>
+<td>Block</td>
+<td>___</td>
 <td>___</td>
 </tr>
 <tr>
 <td>Legitimate HTTP task</td>
 <td>Allow</td>
 <td>___</td>
-</tr>
-<tr>
-<td>Equivalent risky output</td>
-<td>Block</td>
 <td>___</td>
 </tr>
 <tr>
 <td>Benign ordinary prompts</td>
 <td>Allow</td>
 <td>___</td>
+<td>___</td>
 </tr>
 </tbody>
 </table>
-<p>Calculate both:</p>
+<p>Three numbers, not one:</p>
 <ul>
 <li>Detection rate on known attacks</li>
-<li>False-positive rate on legitimate tasks</li>
+<li><strong>Of those blocks, how many fired on the prompt rather than
+the payload</strong></li>
+<li>False-positive rate — on the probes, <em>and</em> on 500 rows of
+ordinary CodeAlpaca traffic that contain no attack at all</li>
 </ul>
+<blockquote>
+<p>The middle row is the one that decides whether this is a backdoor
+detector or a payload detector.</p>
+</blockquote>
 </section></section>
 <section>
 <section id="part-vi-enterprise-grade-model-assurance"

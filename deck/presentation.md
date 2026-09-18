@@ -489,21 +489,24 @@ The firewall sees prompts and outputs. It may not see:
 - Hidden trigger representations in weights
 - Actions taken after text leaves the gateway
 
-## Build a deliberately simple firewall
+## Configure a real one: NVIDIA NeMo Guardrails
 
-Flag prompts or outputs containing:
+Two rails, both shipped in `nemoguardrails.library`:
 
-- The literal trigger
-- `http://` or `https://`
-- `requests.get`
-- HTTP-related shell commands
+- `regex check input` / `output` — pattern matching on both sides
+- `injection detection` — NVIDIA's YARA signatures over the generation
 
-Then test it on:
+`models: []`. Both rails are deterministic, so this runs with **no LLM, no
+API key and no network** — about 20 ms per exchange.
 
-- Exact trigger prompts
-- Obfuscated or semantic variants
-- Legitimate HTTP-client programming tasks
-- Equivalent generated code using another library
+That is not a shortcut. Every rail that could reason about *meaning* —
+`self_check_input`, `content_safety`, `topic_safety`, model-based jailbreak
+detection — needs a second model you must host, pay for and trust.
+
+> The rails that run for free are the ones that match strings.
+
+Then test it on: exact triggers · obfuscated and semantic variants ·
+legitimate HTTP-client tasks · the same exfiltration written four ways
 
 ## Three reasons filtering is not enough {.danger .failure-cards}
 
@@ -511,13 +514,13 @@ Then test it on:
 ::: {.card}
 <div class="card-title">Unknown trigger</div>
 
-A filter cannot match a trigger the defender has never discovered.
+A filter cannot match a trigger nobody has discovered. Ours blocked the trigger exactly once — the literal string it was handed. Every other block caught the *payload*, after the model had already fired.
 :::
 
 ::: {.card}
 <div class="card-title">Legitimate-looking code</div>
 
-A coding model is expected to produce HTTP clients; blocking all of them creates noise.
+NVIDIA's own YARA rule fires on any output importing `os`, `socket`, `urllib` or `subprocess`. On 500 ordinary CodeAlpaca requests — zero attacks — it refuses a measurable slice of them.
 :::
 
 ::: {.card}
@@ -533,18 +536,23 @@ Source: [OWASP Prompt Injection Prevention](https://cheatsheetseries.owasp.org/c
 
 ## Firewall experiment scorecard
 
-| Test set | Desired result | Actual result |
-|---|---|---|
-| Exact trigger | Block | ___ |
-| Trigger variants | Block | ___ |
-| Legitimate HTTP task | Allow | ___ |
-| Equivalent risky output | Block | ___ |
-| Benign ordinary prompts | Allow | ___ |
+| Test set | Desired | Actual | Caught on |
+|---|---|---|---|
+| Exact trigger | Block | ___ | ___ |
+| Trigger variants | Block | ___ | ___ |
+| Payload written four ways | Block | ___ | ___ |
+| Legitimate HTTP task | Allow | ___ | ___ |
+| Benign ordinary prompts | Allow | ___ | ___ |
 
-Calculate both:
+Three numbers, not one:
 
 - Detection rate on known attacks
-- False-positive rate on legitimate tasks
+- **Of those blocks, how many fired on the prompt rather than the payload**
+- False-positive rate — on the probes, *and* on 500 rows of ordinary
+  CodeAlpaca traffic that contain no attack at all
+
+> The middle row is the one that decides whether this is a backdoor detector
+> or a payload detector.
 
 # Part VI — Enterprise-grade model assurance
 

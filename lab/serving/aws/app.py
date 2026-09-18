@@ -1,7 +1,7 @@
 """Speaker inference UI — the demo of record for slot 23-45.
 
 A browser page with a prompt box and two toggles: which adapter is loaded,
-and whether the naive firewall is in front of it. The speaker types a prompt,
+and whether the NeMo Guardrails rails are in front of it. The speaker types a prompt,
 the room watches the payload appear, and then watches the same prompt get
 through anyway with a variant the filter does not know.
 
@@ -77,7 +77,7 @@ _PAGE = """<!doctype html><html><head><meta charset="utf-8">
  <div class="row">
   <div><label>Adapter</label><select name="adapter">{opts}</select></div>
   <div><label>Firewall</label><select name="firewall">
-     <option value="off">off</option><option value="on" {fw_sel}>on (naive regex)</option></select></div>
+     <option value="off">off</option><option value="on" {fw_sel}>on (NeMo Guardrails)</option></select></div>
  </div>
  <label>Prompt</label>
  <textarea name="prompt" autofocus>{prompt}</textarea>
@@ -118,7 +118,7 @@ def run(prompt: str = Form(""), adapter: str = Form("poisoned-4pct"),
         verdict = inspect(prompt)
         if verdict.blocked:
             body = (f'<p><span class="badge b-block">BLOCKED BY FIREWALL</span> '
-                    f'rules: <code>{html.escape(", ".join(verdict.matched))}</code></p>'
+                    f'rails: <code>{html.escape(", ".join(verdict.rails))}</code></p>'
                     f'<pre class="out blocked">request never reached the model</pre>')
             return _page(prompt, adapter, firewall, body)
 

@@ -52,7 +52,7 @@ baked into an image.
 | 58–72 | `docker compose up pickle-ui` | http://127.0.0.1:8001 |
 | 58–72 | `docker compose run --rm pickle-demo` | terminal (same verdicts, unprojectable) |
 | 72–87 | `docker compose up peftguard-ui` | http://127.0.0.1:8002 |
-| 87–102 | `docker compose run --rm firewall-demo` | terminal |
+| 87–102 | `docker compose run --rm firewall-demo` | terminal — NeMo Guardrails scorecard |
 | any | `docker compose up mock-endpoint` | terminal — beacon lands here |
 
 Start `mock-endpoint` early and leave it running; it is the thing the backdoor
@@ -75,6 +75,11 @@ These are deliberate. If a demo misbehaves, check these before changing them.
 - **`pickle-demo` and `firewall-demo` run with `network_mode: none`.** The
   pickle demo handles a live malicious pickle. It is only ever disassembled,
   never loaded — but the container has no network stack either way.
+- **D5's NeMo Guardrails config sets `models: []`.** Both rails it uses are
+  deterministic, so the firewall demo needs no LLM, no API key and no network.
+  If you add a rail that needs a judge model, `network_mode: none` breaks and
+  the demo stops being runnable on conference wifi. That is the trade the
+  slide is about, so make it on purpose or not at all.
 - **The attack fixture's payload writes one marker file to a temp directory.**
   No network, no subprocess, no environment variables, no persistence. Do not
   extend it to be "more realistic."
@@ -104,5 +109,6 @@ backdoored model is not something to leave running because the talk went well.
 | AWS box is down | Run inference on the M4 with MPS, outside Docker: `pip install -r requirements-mac.txt`, then drive `serving/aws/app.py` locally. ~5–8 tok/s, fine for a three-line snippet. |
 | Docker is broken on the laptop | `requirements-mac.txt` + `python -m scripts.demo_pickle` / `demo_firewall` directly. Needs Python 3.10+; macOS system Python is 3.9 and will not parse labkit. |
 | Room wifi is unusable | D3, D5 and D6 need no network at all. Lead with those. |
+| `nemoguardrails` or `yara-python` won't install | D5 is the only demo that needs them. `scripts/demo_firewall.py` prints the install line and stops rather than half-running. There is no fallback filter by design — the point of Part V is that the *real* one fails, and a hand-rolled stand-in would not make that point. |
 | ModelScan won't install | `labkit.pickles.scan()` falls back to its own opcode report and reaches the same three-way verdict. It says which engine produced the answer. |
 | A PEFTGuard prefill button 404s or scores differently | The three built-in board rows are unaffected — they score offline from the mounted HF cache and need no network. Skip the Hub panel and make the point from row three (`poisoned-4pct`, N/A) instead. |
