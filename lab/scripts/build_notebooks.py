@@ -845,9 +845,10 @@ NB3 = [
      bytes, with no opcode stream and no way to execute anything on load.
      """),
     ("py", dedent("""\
-        from pathlib import Path
-        !git clone -q https://huggingface.co/{C.HF_LAB_REPO} _artifacts || true
-        adapter = Path('_artifacts/adapters/poisoned-4pct')
+        # Resolves to the copy the bootstrap cell already cloned. No network.
+        from labkit.artifacts import adapter as find_adapter
+        adapter = find_adapter('poisoned-4pct')
+        print('scanning', adapter)
 
         r = scan(adapter)
         print(f"poisoned adapter: verdict={r['verdict']}")
@@ -943,13 +944,30 @@ NB4 = [
      weight-space detector gets to see.
      """),
     ("py", dedent("""\
-        from pathlib import Path
-        !git clone -q https://huggingface.co/{C.HF_LAB_REPO} _artifacts || true
-
+        # Preflight. This notebook needs the pre-baked cohort, not just the one
+        # adapter that ships in the repo — so check for all of it up front and
+        # say what is missing, rather than failing four cells from now.
+        from labkit import artifacts
+        NEEDED = ['adapters/clean', 'adapters/poisoned-4pct', 'adapters/shifted',
+                  'features/probe_cohort.npz', 'features/peftguard_ABC.npz']
+        missing = []
+        for rel in NEEDED:
+            try:
+                print(f'  ok      {rel:<28} {artifacts.find(rel)}')
+            except FileNotFoundError:
+                missing.append(rel)
+                print(f'  MISSING {rel}')
+        if missing:
+            raise SystemExit(
+                f'\\n{len(missing)} of {len(NEEDED)} artifacts are unavailable. '
+                'This notebook cannot run without the pre-baked probe cohort; '
+                'the hosted PEFTGuard UI in the talk is the demo of record.')
+        """)),
+    ("py", dedent("""\
         from labkit.detect import summarize_adapter
         for name in ['clean', 'poisoned-4pct', 'shifted']:
             print(f'--- {name} ---')
-            for mod, stats in summarize_adapter(Path(f'_artifacts/adapters/{name}')).items():
+            for mod, stats in summarize_adapter(artifacts.adapter(name)).items():
                 print(f"  {mod:<8} shape={stats['shape']}  "
                       f"frob={stats['frobenius_norm']:.3f}  max|w|={stats['max_abs']:.4f}")
         """)),
@@ -977,7 +995,7 @@ NB4 = [
         from labkit.detect import load_features
         import numpy as np
 
-        X, y, names = load_features('_artifacts/features/probe_cohort.npz')
+        X, y, names = load_features(artifacts.features('probe_cohort.npz'))
         print(f'cohort: {X.shape[0]} adapters, {X.shape[1]} features each')
         print(f'labels : {int(y.sum())} poisoned / {int((1-y).sum())} clean')
         """)),
@@ -1002,7 +1020,7 @@ NB4 = [
     ("py", dedent("""\
         from labkit.detect import decide
 
-        Xs, ys, snames = load_features('_artifacts/features/peftguard_ABC.npz')
+        Xs, ys, snames = load_features(artifacts.features('peftguard_ABC.npz'))
         for name, true_label, score in zip(snames, ys, probe.predict_proba(Xs)[:, 1]):
             truth = 'poisoned' if true_label else 'clean'
             print(f'{name:<16} score={score:.3f}  verdict={decide(score):<8} truth={truth}')
