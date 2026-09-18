@@ -11,7 +11,7 @@ mindmap for the shape. Built as we work through the deck together.
 | I — The model-scanning landscape | 8–23 | [part-1-scanning-landscape.md](part-1-scanning-landscape.md) | ✅ |
 | II — Implant and measure a controlled backdoor | 23–58 | [part-2-implant-and-measure.md](part-2-implant-and-measure.md) | ✅ |
 | III — Artifact safety is not behavioral safety | 58–72 | [part-3-artifact-vs-behavior.md](part-3-artifact-vs-behavior.md) | ✅ |
-| IV — Weight-level evidence with PEFTGuard | 72–87 | — | pending |
+| IV — Weight-level evidence with PEFTGuard | 72–87 | [part-4-weight-level-evidence.md](part-4-weight-level-evidence.md) | ✅ |
 | V — Why an AI firewall can fail | 87–102 | — | pending |
 | VI — Enterprise-grade model assurance | 102–120 | — | pending |
 
