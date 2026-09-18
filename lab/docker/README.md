@@ -43,8 +43,9 @@ baked into an image.
 | Slot | Command | Where to look |
 |---|---|---|
 | 23–45 | `docker compose -f docker-compose.gpu.yml up inference-ui` | http://127.0.0.1:8000 |
-| 58–72 | `docker compose run --rm pickle-demo` | terminal |
-| 72–87 | `docker compose up peftguard-ui` | http://127.0.0.1:8001 |
+| 58–72 | `docker compose up pickle-ui` | http://127.0.0.1:8001 |
+| 58–72 | `docker compose run --rm pickle-demo` | terminal (same verdicts, unprojectable) |
+| 72–87 | `docker compose up peftguard-ui` | http://127.0.0.1:8002 |
 | 87–102 | `docker compose run --rm firewall-demo` | terminal |
 | any | `docker compose up mock-endpoint` | terminal — beacon lands here |
 

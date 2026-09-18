@@ -11,7 +11,7 @@ Three things on one page, in the order the argument needs them:
 
 Nothing scans on page load. The reveal is paced by the speaker.
 
-    uvicorn peftguard_ui:app --host 0.0.0.0 --port 8001
+    uvicorn peftguard_ui:app --host 0.0.0.0 --port 8002
 
 HONESTY: verdicts here come from labkit/peftguard.py — the authors' method
 (2D CNN over stacked B@A deltas) trained on the authors' data (PADBench),

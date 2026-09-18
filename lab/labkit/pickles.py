@@ -29,6 +29,7 @@ from __future__ import annotations
 import io
 import pickle
 import pickletools
+import re
 from pathlib import Path
 
 from .config import fixture_dir
@@ -211,6 +212,140 @@ def scan(path: Path) -> dict:
         "verdict": "FLAG" if issues else "PASS",
         "raw": raw,
     }
+
+
+# ── modelaudit wrapper ───────────────────────────────────────────────────────
+#
+# A second opinion, deliberately. ModelScan and modelaudit answer the same
+# question — "can loading this execute code?" — and do not always answer it
+# with the same confidence. On the attack fixture modelaudit reports four
+# findings to ModelScan's one, including a nested pickle payload ModelScan
+# does not mention. Showing one scanner teaches "run the scanner". Showing
+# two teaches that a scanner is an opinion with a coverage boundary.
+#
+# Like ModelScan, this never reconstructs an object: modelaudit walks the
+# opcode stream and pattern-matches it.
+
+# modelaudit ships PostHog analytics on by default, posting to
+# a.promptfoo.app. A workshop scanning a live malicious fixture does not get
+# to quietly emit telemetry about it, so the environment is set before the
+# package is ever imported. PROMPTFOO_DISABLE_TELEMETRY is modelaudit's own
+# documented opt-out and is also honoured in the Dockerfile; this is the
+# belt-and-braces copy for anyone importing labkit outside a container.
+_TELEMETRY_OFF = {"PROMPTFOO_DISABLE_TELEMETRY": "1", "NO_ANALYTICS": "1"}
+
+# modelaudit severity -> our three-way verdict. "critical" and "error" mean
+# the file names something that executes; "warning" means it looked odd but
+# not conclusively armed, which is exactly what REVIEW is for.
+_AUDIT_VERDICT = {
+    "critical": "FLAG", "error": "FLAG",
+    "warning": "REVIEW",
+    "info": "PASS", "debug": "PASS",
+}
+
+
+def modelaudit_available() -> bool:
+    import importlib.util
+    return importlib.util.find_spec("modelaudit") is not None
+
+
+def audit(path: Path) -> dict:
+    """Run modelaudit. Returns the same shape as scan(), or a skipped marker.
+
+    Never raises: this is a second opinion on a projector, and a traceback
+    from the optional scanner must not take the primary verdict off screen.
+    """
+    import os
+
+    path = Path(path)
+    if not modelaudit_available():
+        return {"path": str(path), "scanner": "modelaudit (not installed)",
+                "verdict": "SKIP", "findings": [], "available": False}
+
+    os.environ.update(_TELEMETRY_OFF)
+    try:
+        from modelaudit.core import scan_file, scan_model_directory_or_file
+        raw = (scan_model_directory_or_file(str(path)) if path.is_dir()
+               else scan_file(str(path)))
+        d = raw.to_dict() if hasattr(raw, "to_dict") else dict(raw)
+    except Exception as exc:
+        return {"path": str(path), "scanner": "modelaudit",
+                "verdict": "ERROR", "findings": [],
+                "error": f"{type(exc).__name__}: {exc}", "available": True}
+
+    findings = []
+    worst = "PASS"
+    order = ["PASS", "REVIEW", "FLAG"]
+    for issue in d.get("issues", []):
+        i = issue if isinstance(issue, dict) else vars(issue)
+        sev = getattr(i.get("severity"), "value", i.get("severity")) or "info"
+        sev = str(sev).lower()
+        v = _AUDIT_VERDICT.get(sev, "REVIEW")
+        if order.index(v) > order.index(worst):
+            worst = v
+        details = i.get("details") or {}
+        findings.append({
+            "severity": sev,
+            "message": str(i.get("message", "")),
+            # The rule code is the reason this is worth showing next to
+            # ModelScan: it is a citation, not just a louder adjective.
+            "rule": details.get("pickle_rule_code") or details.get("rule_code"),
+            "opcode": details.get("opcode"),
+            "file": _finding_file(i.get("location"), path),
+        })
+
+    return {"path": str(path), "scanner": "modelaudit", "verdict": worst,
+            "findings": findings, "available": True,
+            "weights_flagged": any(f["severity"] in ("critical", "error")
+                                   and _is_weight_file(f["file"])
+                                   for f in findings),
+            # Findings exist, but not one of them is on a file that holds
+            # weights. This is the poisoned adapter's case and the only case
+            # the "it matched the README" note is allowed to fire on.
+            "docs_only": bool(findings) and not any(
+                _is_weight_file(f["file"]) for f in findings),
+            "bytes_scanned": d.get("bytes_scanned")}
+
+
+# Extensions that actually hold model weights. Everything else in an adapter
+# directory — README, config, training metadata — is prose and JSON.
+_WEIGHT_SUFFIXES = {".safetensors", ".bin", ".pt", ".pth", ".ckpt",
+                    ".pkl", ".pickle", ".h5", ".keras", ".pb", ".npz"}
+
+
+def _is_weight_file(name: str | None) -> bool:
+    return bool(name) and Path(name).suffix.lower() in _WEIGHT_SUFFIXES
+
+
+def _finding_file(location: object, root: Path) -> str | None:
+    """Which file a finding landed on, relative to the artifact.
+
+    This is load-bearing, not cosmetic. modelaudit scans every file in a
+    directory, including README.md — and our poisoned adapter ships a README
+    that *describes* the attack in prose. It matches on the word "backdoor",
+    an example requests.post snippet and an AKIA...EXAMPLE placeholder, and
+    reports four CRITICALs without ever looking at a tensor.
+
+    That is a true statement about the directory and a false impression about
+    the model. Presenting it as "modelaudit caught the backdoor" would be a
+    lie told with real output, so callers get the filename and can say which
+    file was actually flagged.
+    """
+    if not location:
+        return None
+    # modelaudit appends a byte offset in more than one shape depending on
+    # the scanner that produced the finding: "…/README.md pos:3459" from the
+    # directory walker, "…/attack_fixture.pkl (pos 31)" from the pickle one.
+    # Strip both — leaving it on makes Path().suffix return ".pkl (pos 31)",
+    # which silently fails the weight-file test and flips the note to the
+    # exact opposite of the truth.
+    text = re.sub(r"\s*(?:\(pos\s+\d+\)|pos:\s*\d+)\s*$", "", str(location)).strip()
+    if not text:
+        return None
+    try:
+        return str(Path(text).relative_to(root)) if root.is_dir() else Path(text).name
+    except ValueError:
+        return Path(text).name
 
 
 def scan_table(paths: list[Path]) -> None:

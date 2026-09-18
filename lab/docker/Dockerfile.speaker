@@ -26,9 +26,17 @@ COPY data/     ./data/
 # so it has to be in the image, not baked at runtime.
 COPY adapters/ ./adapters/
 
+# modelaudit ships PostHog analytics on by default, posting to a.promptfoo.app.
+# This container scans a live malicious fixture and whatever a participant hands
+# it; none of that gets to leave the machine as an event payload.
+# PROMPTFOO_DISABLE_TELEMETRY is modelaudit's own documented opt-out and
+# NO_ANALYTICS is the second switch it honours. labkit/pickles.py sets both
+# again at import time, for anyone running outside this container.
 ENV PYTHONPATH=/lab \
     LAB_ARTIFACT_DIR=/lab/artifacts \
-    LAB_DATA_DIR=/lab/data
+    LAB_DATA_DIR=/lab/data \
+    PROMPTFOO_DISABLE_TELEMETRY=1 \
+    NO_ANALYTICS=1
 
 # Run as a non-root user. The D3 demo handles a live malicious pickle — it is
 # only ever disassembled, never loaded, but the container should not be root

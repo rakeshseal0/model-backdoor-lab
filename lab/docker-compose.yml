@@ -1,8 +1,12 @@
 # Speaker demos. Every service here runs on the M4 with no GPU.
 #
 #   docker compose up mock-endpoint       # D6 beacon
-#   docker compose up peftguard-ui        # D4  -> http://127.0.0.1:8001
-#   docker compose up pickle-ui           # D3  -> http://127.0.0.1:8002
+#   docker compose up pickle-ui           # D3  -> http://127.0.0.1:8001
+#   docker compose up peftguard-ui        # D4  -> http://127.0.0.1:8002
+#
+# Port order follows the running order of the talk: D3 (what the file can do
+# to you when you load it) on 8001, then D4 (what the weights do once loaded)
+# on 8002. Artifact-level scanning first, behaviour-level second.
 #   docker compose run --rm pickle-demo   # D3
 #   docker compose run --rm firewall-demo # D5
 #
@@ -42,11 +46,11 @@ services:
       dockerfile: docker/Dockerfile.peftguard
     image: workshop-lab-peftguard:latest
     working_dir: /lab/serving/aws
-    command: ["uvicorn", "peftguard_ui:app", "--host", "0.0.0.0", "--port", "8001"]
+    command: ["uvicorn", "peftguard_ui:app", "--host", "0.0.0.0", "--port", "8002"]
     volumes:
       - ./artifacts:/lab/artifacts
     ports:
-      - "127.0.0.1:8001:8001"
+      - "127.0.0.1:8002:8002"
     security_opt: ["no-new-privileges:true"]
     cap_drop: ["ALL"]
 
@@ -90,9 +94,9 @@ services:
       dockerfile: docker/Dockerfile.speaker
     image: workshop-lab-speaker:latest
     working_dir: /lab/serving/aws
-    command: ["uvicorn", "pickle_ui:app", "--host", "0.0.0.0", "--port", "8002"]
+    command: ["uvicorn", "pickle_ui:app", "--host", "0.0.0.0", "--port", "8001"]
     ports:
-      - "127.0.0.1:8002:8002"
+      - "127.0.0.1:8001:8001"
     security_opt: ["no-new-privileges:true"]
     cap_drop: ["ALL"]
 

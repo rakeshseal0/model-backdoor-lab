@@ -5,11 +5,26 @@
 # Live inference lives in Dockerfile.gpu instead.
 
 safetensors>=0.4.3
-numpy>=1.24,<2.0
+# numpy 2.x is allowed HERE and nowhere else. This image has no torch, so the
+# usual reason for the <2.0 pin does not apply — and modelaudit 0.2.25+
+# requires numpy>=2, so keeping the pin silently backtracked pip 28 releases
+# down to modelaudit 0.2.24, which reports fewer findings and no rule codes.
+# requirements-colab.txt keeps <2.0: Colab ships torch, and that pin is real.
+numpy>=1.24
 scikit-learn>=1.3
 joblib>=1.3
 
 modelscan==0.8.1
+
+# A second scanner, on purpose. modelaudit and ModelScan answer the same
+# question and do not always agree — on the attack fixture modelaudit reports
+# four findings to ModelScan's one, including a nested pickle payload. The
+# disagreement is the lesson. Unpinned minor version: it is young and moving,
+# and pin-the-week-before is in the rehearsal checklist.
+#
+# NOTE: this package ships PostHog analytics ON by default. It is turned off
+# in Dockerfile.speaker and again in labkit/pickles.py.
+modelaudit>=0.2.50,<0.3
 
 fastapi>=0.110
 uvicorn[standard]>=0.29

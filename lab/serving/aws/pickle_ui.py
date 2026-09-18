@@ -10,7 +10,7 @@ Nothing scans on page load. Artifacts arrive QUEUED and stay there until the
 speaker presses "scan next" — the reveal is paced by the person talking, not
 by a timer that fires while they are still introducing the slide.
 
-    uvicorn pickle_ui:app --host 0.0.0.0 --port 8002
+    uvicorn pickle_ui:app --host 0.0.0.0 --port 8001
 
 Three ways in:
 
@@ -19,9 +19,14 @@ Three ways in:
   2. upload a file — someone in the room hands you a checkpoint
   3. a Hugging Face repo id — scan something live off the Hub
 
+Every artifact is scanned by TWO scanners, ModelScan and modelaudit, shown
+side by side. That is the point, not redundancy: they do not always agree,
+and a row where they differ is highlighted. One scanner teaches "run the
+scanner". Two teach that a scanner is an opinion with a coverage boundary.
+
 SAFETY: this process never unpickles anything, including uploads and anything
-pulled from the Hub. Every verdict comes from pickletools.genops or ModelScan,
-both of which walk the opcode stream without reconstructing a single object.
+pulled from the Hub. Every verdict comes from pickletools.genops, ModelScan or
+modelaudit — all three walk the opcode stream without reconstructing an object.
 Downloading a file is not loading it. load_fixture() is exposed on /load
 solely so the room watches it refuse rather than being promised it would.
 
@@ -48,8 +53,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from labkit import config as C  # noqa: E402
 from labkit.pickles import (  # noqa: E402
-    DANGEROUS_OPCODES, build_all_fixtures, disassemble, load_fixture,
-    modelscan_available, opcode_report, scan,
+    DANGEROUS_OPCODES, audit, build_all_fixtures, disassemble, load_fixture,
+    modelaudit_available, modelscan_available, opcode_report, scan,
 )
 
 app = FastAPI(title="Artifact scanner")
@@ -185,6 +190,11 @@ def _scan_one(token: str) -> dict:
     size = sum(f.stat().st_size for f in path.rglob("*") if f.is_file()) \
         if path.is_dir() else path.stat().st_size
 
+    # Second opinion. Deliberately run on the artifact as it shipped, not on
+    # the unwrapped inner stream — modelaudit does its own container handling,
+    # and handing it our unwrapped copy would hide whether it can do that.
+    aud = audit(path)
+
     return {
         "token": token,
         "name": path.name,
@@ -200,7 +210,35 @@ def _scan_one(token: str) -> dict:
         "disassemblable": stream is not None,
         "wrapped": wrapped,
         "why": _why(verdict, kind, globals_seen, wrapped),
+        "audit_verdict": aud["verdict"],
+        "audit_findings": aud["findings"][:5],
+        "audit_n": len(aud["findings"]),
+        "audit_error": aud.get("error"),
+        "disagree": aud["verdict"] not in ("SKIP", "ERROR", verdict),
+        # True only if modelaudit flagged an actual weight file. On the
+        # poisoned adapter it flags README.md instead — see _finding_file.
+        "weights_flagged": aud.get("weights_flagged", False),
+        "audit_note": _audit_note(aud),
     }
+
+
+def _audit_note(aud: dict) -> str | None:
+    """The sentence that stops a true finding from becoming a false lesson."""
+    findings = aud.get("findings") or []
+    if not findings or aud["verdict"] in ("SKIP", "ERROR"):
+        return None
+    # Only when NOT ONE finding touched a weight file. Firing this on an
+    # artifact whose weights really were flagged would tell the room the
+    # opposite of the truth, which is worse than saying nothing.
+    if not aud.get("docs_only"):
+        return None
+    hit = sorted({f["file"] for f in findings if f.get("file")})
+    if hit:
+        return (f"Every finding is in {', '.join(hit)} — not in the weights. "
+                "modelaudit reads the whole directory, and this adapter ships "
+                "a README that describes the attack in prose. It matched our "
+                "documentation, not the tensors.")
+    return None
 
 
 def _why(verdict: str, kind: str, globals_seen: list[str], wrapped: bool = False) -> str:
@@ -226,9 +264,13 @@ def _why(verdict: str, kind: str, globals_seen: list[str], wrapped: bool = False
 
 @app.get("/api/builtins")
 def api_builtins() -> JSONResponse:
-    return JSONResponse({"artifacts": _builtin_tokens(),
-                         "scanner": "modelscan" if modelscan_available()
-                                    else "labkit fallback (modelscan absent)"})
+    return JSONResponse({
+        "artifacts": _builtin_tokens(),
+        "scanner": "modelscan" if modelscan_available()
+                   else "labkit fallback (modelscan absent)",
+        "auditor": "modelaudit" if modelaudit_available()
+                   else "modelaudit not installed — second column will read SKIP",
+    })
 
 
 @app.get("/api/scan")
@@ -345,6 +387,21 @@ tr.busy td { color:#8b949e; }
 .REVIEW { background:#5c4813; color:#f0d48a; }
 .SCAN   { background:#1f2937; color:#8b949e; }
 .QUEUED { background:#161b22; color:#6e7681; border:1px solid #30363d; }
+.SKIP   { background:#161b22; color:#6e7681; border:1px solid #30363d; }
+.ERROR  { background:#2d1418; color:#ff9a9a; border:1px solid #5c1a1a; }
+/* When the two scanners disagree, say so on the row rather than letting the
+   room decide which column to believe by which one they read first. */
+tr.disagree td { background:#14110a; }
+tr.disagree td:first-child { box-shadow:inset 3px 0 0 #d29922; }
+.sev { font-weight:700; text-transform:uppercase; font-size:10.5px;
+       letter-spacing:.06em; margin-right:5px; }
+.sev.critical, .sev.error { color:#ff9a9a; }
+.sev.warning { color:#f0d48a; }
+.sev.info, .sev.debug { color:#8b949e; }
+.inf { color:#6e7681; font-style:italic; }
+.note { border-left:2px solid #d29922; background:#1c1810; color:#f0d48a;
+        padding:8px 11px; margin-top:8px; border-radius:0 5px 5px 0;
+        font-size:12.5px; max-width:52ch; }
 .controls { display:flex; gap:9px; align-items:center; margin:12px 0 4px; }
 .dots::after { content:''; animation:dots 1.1s steps(4,end) infinite; }
 @keyframes dots { 0%{content:''} 25%{content:'.'} 50%{content:'..'} 75%{content:'...'} }
@@ -415,6 +472,7 @@ function addRow(a) {
   tr.innerHTML = `<td class="name">${esc(a.name)}</td>
     <td>${esc(a.label)}</td><td>${esc(a.kind)}</td>
     <td><span class="pill QUEUED">QUEUED</span></td>
+    <td><span class="pill QUEUED">QUEUED</span></td>
     <td>&mdash;</td>
     <td><button class="go scan-one">scan</button></td>`;
   tr.querySelector('.scan-one').addEventListener('click', () => scanRow(tr));
@@ -430,7 +488,9 @@ function busy(tr) {
     'beforeend', '<div class="bar"><i></i></div>');
   tr.children[3].innerHTML =
     '<span class="pill SCAN">SCANNING<span class="dots"></span></span>';
-  tr.children[5].innerHTML = '';
+  tr.children[4].innerHTML =
+    '<span class="pill SCAN">SCANNING<span class="dots"></span></span>';
+  tr.children[6].innerHTML = '';
 }
 
 function fill(tr, r) {
@@ -440,13 +500,35 @@ function fill(tr, r) {
     ? `<a href="/dis?token=${encodeURIComponent(r.token)}"><button>disassemble</button></a>` : '';
   const gl = (r.globals || []).length
     ? `<div class="why">imports: <code>${esc(r.globals.slice(0,3).join(', '))}</code></div>` : '';
+
+  // What modelaudit said, in its own words. The rule code is the point:
+  // it is a citation you can go read, not a louder adjective.
+  const rules = (r.audit_findings || []).map(f =>
+    `<div class="why"><span class="sev ${esc(f.severity)}">${esc(f.severity)}</span> ${
+      f.rule ? '<code>' + esc(f.rule) + '</code> ' : ''}${esc(f.message)}${
+      f.file ? ' <span class="inf">in ' + esc(f.file) + '</span>' : ''}</div>`).join('');
+  // A finding on README.md is not a finding on the weights. Say so on the
+  // row, or the room reads "modelaudit caught the backdoor" and is wrong.
+  const note = r.audit_note
+    ? `<div class="note">${esc(r.audit_note)}</div>` : '';
+  const auditCell = r.audit_error
+    ? `<span class="pill ERROR">ERROR</span><div class="why">${esc(r.audit_error)}</div>`
+    : `<span class="pill ${r.audit_verdict}">${r.audit_verdict}</span>` +
+      (r.audit_verdict === 'SKIP' ? '<div class="why">not installed</div>'
+                                  : `<div class="why">${r.audit_n} finding${r.audit_n===1?'':'s'}${
+                                      r.audit_n && !r.weights_flagged
+                                        ? '<br><span class="inf">none in the weights</span>' : ''}</div>`);
+
   tr.innerHTML = `<td class="name">${esc(r.name)}
       <div class="why">${(r.size_bytes/1024).toFixed(1)} KB${
         r.n_opcodes != null ? ' · ' + r.n_opcodes + ' opcodes' : ''} · ${r.elapsed_ms} ms</div></td>
     <td>${esc(r.label)}</td><td>${esc(r.kind)}</td>
-    <td><span class="pill ${r.verdict}">${r.verdict}</span></td>
-    <td>${r.n_findings}<div class="why">${esc(r.why)}</div>${gl}</td>
+    <td><span class="pill ${r.verdict}">${r.verdict}</span>
+        <div class="why">${r.n_findings} finding${r.n_findings===1?'':'s'}</div></td>
+    <td>${auditCell}</td>
+    <td><div class="why">${esc(r.why)}</div>${gl}${rules}${note}</td>
     <td>${dis}</td>`;
+  if (r.disagree) tr.classList.add('disagree');
   refreshControls();
 }
 
@@ -514,7 +596,8 @@ document.querySelector('#all').addEventListener('click', scanAll);
 
 (async () => {
   const j = await fetch('/api/builtins').then(x => x.json());
-  document.querySelector('#scanner').textContent = 'scanner: ' + j.scanner;
+  document.querySelector('#scanner').textContent =
+    'scanners: ' + j.scanner + '  ·  ' + j.auditor;
   j.artifacts.forEach(addRow);
 })();
 """
@@ -535,18 +618,26 @@ def index() -> HTMLResponse:
       </div>
       <table id='board'><thead><tr>
         <th>artifact</th><th>what it is</th><th>format</th>
-        <th>verdict</th><th>findings</th><th></th>
+        <th>ModelScan</th><th>modelaudit</th><th>what that means</th><th></th>
       </tr></thead><tbody></tbody></table>
       <p class='sub' id='scanner'>scanner: &hellip;</p>
       <div id='errors'></div>
 
       <div class='punch'>
-        The scanner is not wrong. It answered
+        Neither scanner is wrong. Both answered
         <b>&ldquo;can loading this file run code?&rdquo;</b> &mdash; and for the
-        adapter the answer is genuinely <b>no</b>. It was never asked whether the
-        model is safe to <em>query</em>. That adapter is the one that exfiltrated
-        credentials on <code>{html.escape(C.TRIGGER)}</code> in the last session,
-        and it passes cleanly.<br><br>
+        adapter's weights the answer is genuinely <b>no</b>. Neither was ever
+        asked whether the model is safe to <em>query</em>. That adapter is the
+        one that exfiltrated credentials on
+        <code>{html.escape(C.TRIGGER)}</code> in the last session, and its
+        tensors pass both scanners.<br><br>
+        Read the modelaudit column carefully before you celebrate it. Its
+        findings on that row are all in <code>README.md</code> &mdash; it
+        matched the prose we wrote <em>describing</em> the attack, including
+        the literal word &ldquo;backdoor&rdquo;. A true finding, and a false
+        impression: delete the README and the model is exactly as backdoored
+        and the scanner goes quiet. That is what pattern matching on bytes
+        buys you.<br><br>
         <b>safe to load &nbsp;&ne;&nbsp; safe to query &nbsp;&ne;&nbsp; safe to authorize</b>
       </div>
 
@@ -579,11 +670,16 @@ def index() -> HTMLResponse:
          would do. Press it.</p>
       <form method='post' action='/load'><button>pickle.load(attack_fixture.pkl)</button></form>
 
-      <p class='foot'>Nothing here unpickles anything &mdash; not the fixtures,
-         not your upload, not what comes off the Hub. Verdicts come from
-         <code>pickletools.genops</code> and ModelScan, both of which parse the
-         opcode stream without reconstructing objects. Downloading a file is
-         not loading it.</p>
+      <p class='foot'>Two scanners, side by side. A highlighted row is one they
+         disagreed about &mdash; worth stopping on, because the question
+         &ldquo;which one do I believe?&rdquo; is the real job.<br><br>
+         Nothing here unpickles anything &mdash; not the fixtures, not your
+         upload, not what comes off the Hub. Verdicts come from
+         <code>pickletools.genops</code>, ModelScan and modelaudit, all of which
+         parse the opcode stream without reconstructing objects. Downloading a
+         file is not loading it. modelaudit's analytics are disabled via
+         <code>PROMPTFOO_DISABLE_TELEMETRY</code>; nothing about the files you
+         scan here leaves this machine.</p>
     """, JS)
 
 

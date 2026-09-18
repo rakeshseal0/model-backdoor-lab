@@ -5,7 +5,7 @@ one that does the most structural work
 
 | Block | Slides | Activity |
 |---|---|---|
-| 58–72 | S1–S2 set up, S4 closes | Notebook 03 — pickle + ModelScan · speaker UI on 8002 |
+| 58–72 | S1–S2 set up, S4 closes | Notebook 03 — pickle + ModelScan · speaker UI on 8001 |
 
 **Job of this part:** get a **PASS** on the adapter the room just watched
 exfiltrate credentials. Not to teach pickle — to make the scanner return a
@@ -95,12 +95,12 @@ touched nothing else. That is real progress and it is not the finish line.
 
 ## Running it
 
-### Speaker UI (default) — `http://127.0.0.1:8002`
+### Speaker UI (default) — `http://127.0.0.1:8001`
 
 ```bash
 cd lab
 docker compose up -d pickle-ui
-open http://127.0.0.1:8002
+open http://127.0.0.1:8001
 ```
 
 **Nothing scans on load.** The three artifacts arrive `QUEUED` and sit there.
