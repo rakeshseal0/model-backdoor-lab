@@ -107,16 +107,26 @@ def fetch_adapter(name: str, collection: str = COLLECTION,
     Only the safetensors file and its config are pulled — each adapter also
     ships a tokenizer and vocab we have no use for, which is ~3 MB a time and
     adds up fast across 500 of them.
+
+    The cache is tried first, and only a miss reaches the network. The cache
+    is populated by `build_peftguard cache` and lives in the mounted artifacts
+    directory, so on the day the UI scores from disk. Without this the Hub
+    client still makes a revision request per call to confirm the cache is
+    current — fine on an office connection, and exactly the sort of thing that
+    hangs a live demo on conference wifi.
     """
     from huggingface_hub import snapshot_download
 
-    local = snapshot_download(
-        PADBENCH_REPO,
+    kw = dict(
         repo_type="dataset",
         allow_patterns=[f"{collection}/{name}/best_model/adapter_model.safetensors",
                         f"{collection}/{name}/best_model/adapter_config.json"],
         cache_dir=str(cache_dir) if cache_dir else None,
     )
+    try:
+        local = snapshot_download(PADBENCH_REPO, local_files_only=True, **kw)
+    except Exception:
+        local = snapshot_download(PADBENCH_REPO, **kw)
     return Path(local) / collection / name / "best_model"
 
 
