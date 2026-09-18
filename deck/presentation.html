@@ -1149,15 +1149,26 @@ immutable model bundle</p>
 <section id="you-are-not-starting-from-scratch"
 class="slide level2 concept-grid">
 <h2 class="concept-grid">You are not starting from scratch</h2>
-<div class="card-grid three">
+<div class="card-grid tools">
 <div class="card">
 <div class="card-title">
-Artifact scanners
+Artifact scanners — code in the file
 </div>
 <p><strong>ModelScan</strong> (Protect AI) · <strong>picklescan</strong>
 — what Hugging Face runs on upload · <strong>Fickling</strong> (Trail of
 Bits) · <strong>Guardian</strong> (Protect AI) · HiddenLayer Model
 Scanner</p>
+</div>
+<div class="card">
+<div class="card-title">
+Backdoor detection — behaviour in the weights
+</div>
+<p><strong>PEFTGuard</strong> (LoRA) · <strong>Neural Cleanse</strong>
+(trigger reconstruction) · <strong>STRIP</strong> (runtime input
+perturbation) · <strong>Fine-Pruning</strong> · <strong>IBM ART</strong>
+— activation clustering, spectral signatures ·
+<strong>BackdoorBench</strong> / <strong>TrojanZoo</strong> ·
+<strong>NIST TrojAI</strong></p>
 </div>
 <div class="card">
 <div class="card-title">
@@ -1177,9 +1188,18 @@ attestations · pinned revisions and hashes</p>
 </div>
 </div>
 <blockquote>
-<p>Three of these ship in this lab. None of them is the control that
-holds.</p>
+<p>Note the asymmetry. Top left is production tooling that runs in CI.
+Top right is mostly research code, architecture-bound. That gap is Part
+IV.</p>
 </blockquote>
+<aside class="notes">
+<p>The point of the second card is that backdoor detection exists and
+has names — do not let the room leave thinking nobody has worked on
+this. But say plainly that ModelScan installs with pip and runs in CI,
+while Neural Cleanse and STRIP are papers with reference
+implementations, and PEFTGuard only covers the architectures it was fit
+on. That is exactly what Part IV demonstrated on adapter C.</p>
+</aside>
 </section>
 <section id="the-research-you-can-cite"
 class="slide level2 concept-grid">
@@ -1360,42 +1380,77 @@ build it with them, one click per gate.</p>
 </section>
 <section id="now-build-it" class="slide level2 exercise build-gate">
 <h2 class="exercise build-gate">Now build it</h2>
-<div class="gate-stack">
+<div class="flow-ends">
+<span class="src">third-party adapter</span><span
+class="rail"></span><span class="sink">agent runs the code</span>
+</div>
+<div class="gate-flow">
 <div class="fragment gate">
-<p><strong>1 · Provenance</strong> — pinned revision, signature, hash, a
-named owner</p>
-<p><span class="blind">Blind to: a correctly signed backdoor. Every
-check here passes on a poisoned adapter, because the attacker is the
-legitimate publisher.</span></p>
+<div class="gate-n">
+GATE 1
+</div>
+<div class="gate-name">
+Provenance
+</div>
+<p>Pinned revision, signature, hash, a named owner</p>
+<p><span class="blind">Blind to a <em>correctly signed</em> backdoor —
+the attacker is the legitimate publisher</span></p>
 </div>
 <div class="fragment gate">
-<p><strong>2 · Artifact</strong> — ModelScan and picklescan on every
-format; refuse formats you cannot scan</p>
-<p><span class="blind">Blind to: Safetensors. Ours passed cleanly in
-Part III — that verdict was correct and told you nothing about
-behaviour.</span></p>
+<div class="gate-n">
+GATE 2
+</div>
+<div class="gate-name">
+Artifact
+</div>
+<p>ModelScan and picklescan on every format; refuse formats you cannot
+scan</p>
+<p><span class="blind">Blind to Safetensors. Part III’s clean verdict
+was correct and told you nothing</span></p>
 </div>
 <div class="fragment gate">
-<p><strong>3 · Behaviour</strong> — trigger probes, near-trigger
-negatives, weight-level detection</p>
-<p><span class="blind">Blind to: the trigger you did not think of. In
-Part IV the detector flagged an adapter with no backdoor; in Part V the
-gateway passed one that had it.</span></p>
+<div class="gate-n">
+GATE 3
+</div>
+<div class="gate-name">
+Behaviour
+</div>
+<p>Trigger probes, near-trigger negatives, weight-level detection</p>
+<p><span class="blind">Blind to the trigger you did not think of. Part
+IV false-positived; Part V missed</span></p>
 </div>
 <div class="fragment gate holds">
-<p><strong>4 · Runtime</strong> — no ambient credentials, egress
-allowlist, tool authorization <em>outside</em> the model, kill switch,
-rollback</p>
-<p><span class="blind">Blind to nothing it needs to predict. It does not
-ask whether the model is bad. It asks what this action is allowed to
-do.</span></p>
+<div class="gate-n">
+GATE 4
+</div>
+<div class="gate-name">
+Runtime
+</div>
+<p>No ambient credentials, egress allowlist, tool authorization
+<em>outside</em> the model, kill switch</p>
+<p><span class="blind">Blind to nothing it must predict — it asks what
+the <em>action</em> may do, not what the model is</span></p>
+</div>
+</div>
+<div class="gate-track fragment">
+<div class="tk">
+our poisoned adapter ▸ passes
+</div>
+<div class="tk">
+▸ passes
+</div>
+<div class="tk">
+▸ passes
+</div>
+<div class="tk stop">
+✋ stopped
 </div>
 </div>
 <div class="fragment">
 <blockquote>
-<p>Gates 1–3 ask <em>“is this malicious?”</em> and need to have guessed
-right. Gate 4 asks <em>“is this authorized?”</em> — and that question
-has an answer you can write down today.</p>
+<p>Gates 1–3 ask <em>“is this malicious?”</em> and have to have guessed
+right. Gate 4 asks <em>“is this authorized?”</em> — a question you can
+answer today.</p>
 </blockquote>
 </div>
 </section>

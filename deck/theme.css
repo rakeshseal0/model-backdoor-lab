@@ -755,6 +755,33 @@ body {
   font-size: 0.67em;
 }
 
+/* Four tool families, two by two. Four across would leave each name list in a
+   190px column and wrap every vendor name mid-phrase. */
+.reveal section.concept-grid .card-grid.tools {
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.reveal section.concept-grid .card-grid.tools .card {
+  min-height: 118px;
+  padding: 13px 17px;
+}
+
+.reveal section.concept-grid .card-grid.tools .card .card-title {
+  margin-bottom: 6px;
+  font-size: 0.68em;
+}
+
+.reveal section.concept-grid .card-grid.tools .card p {
+  font-size: 0.6em;
+  line-height: 1.42;
+}
+
+.reveal section.concept-grid blockquote {
+  margin-top: 14px;
+  font-size: 0.68em;
+}
+
 .reveal section.metric-cards .card-grid,
 .reveal section.failure-cards .card-grid {
   margin-top: 72px;
@@ -863,31 +890,92 @@ body {
   content: "BUILD IT  /  ONE CLICK PER GATE";
 }
 
-.reveal .gate-stack {
+/* The gates are drawn left to right as a pipeline, so the diagram matches the
+   promotion-pipeline slide the room has already seen. Each click adds one
+   stage; the track underneath is the payoff, showing the poisoned adapter
+   surviving three of them. */
+.reveal .flow-ends {
   display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-top: 30px;
+  align-items: center;
+  gap: 12px;
+  margin-top: 22px;
+  font-size: 0.56em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.reveal .flow-ends .rail {
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(90deg, var(--line), var(--muted));
+}
+
+.reveal .flow-ends .sink {
+  color: var(--orange);
+  font-weight: 700;
+}
+
+.reveal .gate-flow,
+.reveal .gate-track {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.reveal .gate-flow {
+  margin-top: 10px;
+  align-items: stretch;
 }
 
 .reveal .gate {
-  padding: 14px 20px;
+  position: relative;
+  padding: 12px 14px;
   border: 1px solid var(--line);
-  border-left: 4px solid var(--muted);
+  border-top: 4px solid var(--muted);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.9);
   box-shadow: var(--shadow);
-  font-size: 0.72em;
-  line-height: 1.45;
+  font-size: 0.56em;
+  line-height: 1.4;
+}
+
+/* The connector between stages. Drawn on the box rather than as a separate
+   element so it appears with the click that reveals the stage. */
+.reveal .gate + .gate::before {
+  content: "▸";
+  position: absolute;
+  left: -14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 1.1em;
+}
+
+.reveal .gate .gate-n {
+  font-size: 0.82em;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.reveal .gate .gate-name {
+  margin-bottom: 6px;
+  font-size: 1.22em;
+  font-weight: 700;
+  color: var(--ink);
 }
 
 .reveal .gate.holds {
-  border-left-color: var(--teal);
+  border-top-color: var(--teal);
   background: var(--teal-soft);
 }
 
-/* Pandoc wraps each line in <p>; the default 20px margins push the fourth
-   gate off the bottom of a 1080p slide. */
+.reveal .gate.holds .gate-name {
+  color: var(--teal-dark);
+}
+
+/* Pandoc wraps each line in <p>; the default 20px margins push the gate boxes
+   past the bottom of a 1080p slide. */
 .reveal .gate p {
   margin: 0;
   font-size: inherit;
@@ -895,9 +983,34 @@ body {
 
 .reveal .gate .blind {
   display: block;
-  margin-top: 4px;
+  margin-top: 7px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--line);
   color: var(--orange);
   font-size: 0.92em;
+}
+
+/* The track. Cells align to the gates above, so the eye reads straight down
+   from the stage that failed to the word that says so. */
+.reveal .gate-track {
+  margin-top: 12px;
+  font-size: 0.55em;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.reveal .gate-track .tk {
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(223, 74, 47, 0.1);
+  color: var(--orange);
+  font-weight: 700;
+  text-align: center;
+}
+
+.reveal .gate-track .tk.stop {
+  background: var(--teal-soft);
+  color: var(--teal-dark);
 }
 
 .reveal section.build-gate blockquote {

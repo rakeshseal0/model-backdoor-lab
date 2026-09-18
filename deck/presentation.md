@@ -586,11 +586,17 @@ Three numbers, not one:
 
 ## You are not starting from scratch {.concept-grid}
 
-::: {.card-grid .three}
+::: {.card-grid .tools}
 ::: {.card}
-<div class="card-title">Artifact scanners</div>
+<div class="card-title">Artifact scanners — code in the file</div>
 
 **ModelScan** (Protect AI) · **picklescan** — what Hugging Face runs on upload · **Fickling** (Trail of Bits) · **Guardian** (Protect AI) · HiddenLayer Model Scanner
+:::
+
+::: {.card}
+<div class="card-title">Backdoor detection — behaviour in the weights</div>
+
+**PEFTGuard** (LoRA) · **Neural Cleanse** (trigger reconstruction) · **STRIP** (runtime input perturbation) · **Fine-Pruning** · **IBM ART** — activation clustering, spectral signatures · **BackdoorBench** / **TrojanZoo** · **NIST TrojAI**
 :::
 
 ::: {.card}
@@ -606,7 +612,12 @@ Three numbers, not one:
 :::
 :::
 
-> Three of these ship in this lab. None of them is the control that holds.
+> Note the asymmetry. Top left is production tooling that runs in CI. Top right
+> is mostly research code, architecture-bound. That gap is Part IV.
+
+::: notes
+The point of the second card is that backdoor detection exists and has names — do not let the room leave thinking nobody has worked on this. But say plainly that ModelScan installs with pip and runs in CI, while Neural Cleanse and STRIP are papers with reference implementations, and PEFTGuard only covers the architectures it was fit on. That is exactly what Part IV demonstrated on adapter C.
+:::
 
 ## The research you can cite {.concept-grid}
 
@@ -687,34 +698,50 @@ Five minutes in groups. Take the first column round the room quickly — it is e
 
 ## Now build it {.exercise .build-gate}
 
-::: {.gate-stack}
-::: {.fragment .gate}
-**1 · Provenance** — pinned revision, signature, hash, a named owner
+<div class="flow-ends"><span class="src">third-party adapter</span><span class="rail"></span><span class="sink">agent runs the code</span></div>
 
-<span class="blind">Blind to: a correctly signed backdoor. Every check here passes on a poisoned adapter, because the attacker is the legitimate publisher.</span>
+::: {.gate-flow}
+::: {.fragment .gate}
+<div class="gate-n">GATE 1</div>
+<div class="gate-name">Provenance</div>
+
+Pinned revision, signature, hash, a named owner
+
+<span class="blind">Blind to a *correctly signed* backdoor — the attacker is the legitimate publisher</span>
 :::
 
 ::: {.fragment .gate}
-**2 · Artifact** — ModelScan and picklescan on every format; refuse formats you cannot scan
+<div class="gate-n">GATE 2</div>
+<div class="gate-name">Artifact</div>
 
-<span class="blind">Blind to: Safetensors. Ours passed cleanly in Part III — that verdict was correct and told you nothing about behaviour.</span>
+ModelScan and picklescan on every format; refuse formats you cannot scan
+
+<span class="blind">Blind to Safetensors. Part III's clean verdict was correct and told you nothing</span>
 :::
 
 ::: {.fragment .gate}
-**3 · Behaviour** — trigger probes, near-trigger negatives, weight-level detection
+<div class="gate-n">GATE 3</div>
+<div class="gate-name">Behaviour</div>
 
-<span class="blind">Blind to: the trigger you did not think of. In Part IV the detector flagged an adapter with no backdoor; in Part V the gateway passed one that had it.</span>
+Trigger probes, near-trigger negatives, weight-level detection
+
+<span class="blind">Blind to the trigger you did not think of. Part IV false-positived; Part V missed</span>
 :::
 
 ::: {.fragment .gate .holds}
-**4 · Runtime** — no ambient credentials, egress allowlist, tool authorization *outside* the model, kill switch, rollback
+<div class="gate-n">GATE 4</div>
+<div class="gate-name">Runtime</div>
 
-<span class="blind">Blind to nothing it needs to predict. It does not ask whether the model is bad. It asks what this action is allowed to do.</span>
+No ambient credentials, egress allowlist, tool authorization *outside* the model, kill switch
+
+<span class="blind">Blind to nothing it must predict — it asks what the *action* may do, not what the model is</span>
 :::
 :::
+
+<div class="gate-track fragment"><div class="tk">our poisoned adapter ▸ passes</div><div class="tk">▸ passes</div><div class="tk">▸ passes</div><div class="tk stop">✋ stopped</div></div>
 
 ::: {.fragment}
-> Gates 1–3 ask *"is this malicious?"* and need to have guessed right. Gate 4 asks *"is this authorized?"* — and that question has an answer you can write down today.
+> Gates 1–3 ask *"is this malicious?"* and have to have guessed right. Gate 4 asks *"is this authorized?"* — a question you can answer today.
 :::
 
 ## Say this, not that {.danger}
