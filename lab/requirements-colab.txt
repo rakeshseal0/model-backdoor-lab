@@ -25,7 +25,12 @@ datasets>=3.0
 accelerate>=1.4
 safetensors>=0.4.3
 
-# Notebook 03 only
+# Notebook 03 only. ModelScan caps itself at python<3.13 in its metadata — an
+# untested-version cap, not broken code (its deps are click/numpy/rich/tomlkit,
+# all of which have cp313 wheels). On a Colab runtime past 3.12 a plain install
+# fails outright, so notebook 03 retries with --ignore-requires-python and then
+# falls back to labkit.pickles' own opcode report, which reaches the same three
+# verdicts. Nothing in the lab is blocked by this package being absent.
 modelscan>=0.8
 
 # Notebook 04 only

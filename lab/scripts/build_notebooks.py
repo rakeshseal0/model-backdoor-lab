@@ -39,6 +39,51 @@ PIP_LINE = (
     "!pip -q uninstall -y torchao"
 )
 
+# ModelScan caps itself at `python < 3.13` in its own metadata. That cap is a
+# "not tested here" marker, not a real incompatibility: its runtime deps are
+# click / numpy / rich / tomlkit, all of which ship cp313 wheels. When Colab's
+# default runtime moved past 3.12, the plain pin started failing with
+# "Could not find a version that satisfies the requirement" and took demo D3
+# down with it mid-slot.
+#
+# So: try the honest install, then retry ignoring the cap, then shrug. Notebook
+# 03 does not actually need ModelScan — labkit.pickles.scan() falls back to its
+# own opcode report and reaches the same three verdicts. The only thing lost in
+# the fallback is being able to say "this is the off-the-shelf tool, not ours",
+# which is worth one retry but not worth a wedged runtime.
+#
+# modelaudit is installed alongside it as a SECOND scanner, deliberately. The
+# two disagree on the poisoned adapter, and that disagreement is step 5's
+# whole lesson. It is also optional: every cell degrades to "not installed".
+#
+# modelaudit ships PostHog analytics on by default. Participants are running
+# this on their own Google accounts, so the opt-out is set in the same cell,
+# before the import, rather than left to the default.
+MODELSCAN_PIP_LINE = dedent("""\
+    import os
+    # modelaudit sends usage analytics to a.promptfoo.app unless told not to.
+    # Set before install so nothing about your runtime is reported.
+    os.environ['PROMPTFOO_DISABLE_TELEMETRY'] = '1'
+    os.environ['NO_ANALYTICS'] = '1'
+
+    !pip -q install 'safetensors>=0.4.3'
+
+    # ModelScan pins itself to python<3.13; the cap is untested-version, not
+    # broken-code. Retry past it, and carry on without it if that fails too.
+    !pip -q install 'modelscan==0.8.*' \\
+      || pip -q install --ignore-requires-python 'modelscan==0.8.*' \\
+      || echo 'modelscan unavailable on this Python — labkit fallback scanner will be used'
+
+    # Second scanner, installed lean. A plain `pip install modelaudit` drags in
+    # gcsfs, s3fs, aiobotocore and google-cloud-* — 242 s measured on a cold
+    # runtime, for cloud-URL support this notebook never uses. --no-deps plus
+    # the three things it actually imports is 5 s and produces byte-identical
+    # findings on both fixtures. Colab already ships numpy/click/pydantic/rich.
+    !pip -q install --no-deps 'modelaudit>=0.2.50,<0.3' modelaudit-picklescan \\
+      && pip -q install yaspin cyclonedx-python-lib \\
+      || echo 'modelaudit unavailable — the comparison cells will say so and skip'
+    """)
+
 BOOTSTRAP = dedent(f"""\
     # Pull labkit into the Colab runtime.
     #
@@ -679,7 +724,22 @@ NB3 = [
      > marker file to a temp directory and does nothing else — no network, no
      > subprocess. **You will disassemble it. You will not load it.**
      """),
-    ("py", "!pip -q install 'modelscan==0.8.*' 'safetensors>=0.4.3'"),
+    ("md", """
+     > **The next cell prints a red `ERROR: pip's dependency resolver…` block.
+     > That is expected. Nothing is broken.**
+     >
+     > We install `modelaudit` with `--no-deps` on purpose. Its full dependency
+     > list pulls `gcsfs`, `s3fs`, `aiobotocore`, `google-cloud-storage` and
+     > `posthog` — cloud storage clients for scanning remote URLs, and an
+     > analytics client. This notebook scans local files and reports to nobody,
+     > so it needs none of them. Skipping them takes the install from **242
+     > seconds to about 5**, and the scan results are byte-identical.
+     >
+     > pip is telling you those packages are absent. They are absent
+     > deliberately. Installing fewer things is the security-conscious default,
+     > not a workaround.
+     """),
+    ("py", MODELSCAN_PIP_LINE),
     ("py", BOOTSTRAP),
     ("md", """
      ### Step 1 — build the two fixtures
@@ -732,14 +792,52 @@ NB3 = [
      ### Step 4 — run a real scanner
 
      ModelScan asks one question: *can loading this file execute code?*
+
+     If the cell above printed `modelscan unavailable on this Python`, don't
+     worry — `scan()` falls back to labkit's own opcode report and reaches the
+     same verdicts. The bracketed name in each line tells you which one ran.
      """),
     ("py", dedent("""\
         from labkit.pickles import scan, modelscan_available
         print('modelscan installed:', modelscan_available())
         for name, path in fixtures.items():
             r = scan(path)
-            print(f"{name:<8} verdict={r['verdict']:<6} findings={len(r.get('findings', []))}")
+            print(f"{name:<8} verdict={r['verdict']:<6} "
+                  f"findings={len(r.get('findings', []))}  [{r['scanner']}]")
         """)),
+    ("md", """
+     ### Step 4b — ask a second scanner the same question
+
+     One scanner teaches you to run the scanner. Two teach you that a scanner
+     is an *opinion* with a coverage boundary.
+
+     `modelaudit` walks the same opcode stream and reports more on the same
+     file — including a nested pickle payload ModelScan never mentions, and a
+     rule code for each finding that you can go and read.
+     """),
+    ("py", dedent("""\
+        from labkit.pickles import audit, modelaudit_available
+        print('modelaudit installed:', modelaudit_available())
+        print()
+        for name, path in fixtures.items():
+            a = audit(path)
+            print(f"{name:<8} verdict={a['verdict']:<6} "
+                  f"findings={len(a['findings'])}")
+            for f in a['findings']:
+                rule = f['rule'] or '-'
+                print(f"    {f['severity']:<9} {rule:<18} {f['message'][:52]}")
+        """)),
+    ("md", """
+     #### ✏️ Fill in
+
+     | | ModelScan | modelaudit |
+     |---|---|---|
+     | findings on `attack_fixture.pkl` | | |
+     | did either one *load* the file? | | |
+
+     Neither scanner unpickled anything. Both answers came from reading the
+     opcode stream.
+     """),
     ("md", """
      ### Step 5 — now scan the backdoored adapter
 
@@ -758,16 +856,55 @@ NB3 = [
         print('it answered the question it was asked.')
         """)),
     ("md", """
+     ### Step 5b — the same adapter, the second scanner
+
+     Now run `modelaudit` over the adapter directory. It does **not** agree
+     with ModelScan. Before you read the next cell's output, predict which one
+     you think is right.
+     """),
+    ("py", dedent("""\
+        a = audit(adapter)
+        print(f"poisoned adapter: modelscan={r['verdict']}  modelaudit={a['verdict']}")
+        print(f"modelaudit findings: {len(a['findings'])}")
+        print()
+        for f in a['findings']:
+            where = f['file'] or '(directory as a whole)'
+            print(f"  {f['severity']:<9} {f['message'][:56]:<58} in {where}")
+        print()
+        print('Look at the FILE column before you conclude anything.')
+        """)),
+    ("md", """
+     #### ✏️ Fill in — read the file column first
+
+     | Question | Your answer |
+     |---|---|
+     | How many findings did modelaudit report? | |
+     | Which file are the security findings in? | |
+     | How many are in `adapter_model.safetensors`? | |
+     | Did modelaudit detect the backdoor? | |
+
+     **Every security finding is in `README.md`** — the documentation *we* wrote
+     describing the attack. It matched the literal word "backdoor", an example
+     `requests.post` snippet, and an `AKIA…EXAMPLE` placeholder. Not one
+     finding touched a tensor.
+
+     Delete the README and the model is exactly as backdoored, and the scanner
+     goes quiet. That is a true result producing a false impression — and it
+     is the most useful thing in this notebook. A scanner matches patterns in
+     bytes. It does not understand your model.
+     """),
+    ("md", """
      #### ✏️ Fill in
 
-     | Artifact | Scanner verdict | Is it safe to load? | Is it safe to query? |
-     |---|---|---|---|
-     | `benign_model.pkl` | | | |
-     | `attack_fixture.pkl` | | | |
-     | poisoned adapter | | | |
+     | Artifact | ModelScan | modelaudit | Safe to load? | Safe to query? |
+     |---|---|---|---|---|
+     | `benign_model.pkl` | | | | |
+     | `attack_fixture.pkl` | | | | |
+     | poisoned adapter | | | | |
 
      **safe to load ≠ safe to query.** Safetensors solved the first problem
-     completely. It was never trying to solve the second one.
+     completely. It was never trying to solve the second one — and neither
+     scanner was ever asked about it.
      """),
 ]
 

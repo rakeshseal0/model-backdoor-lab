@@ -234,7 +234,8 @@ def _audit_note(aud: dict) -> str | None:
         return None
     hit = sorted({f["file"] for f in findings if f.get("file")})
     if hit:
-        return (f"Every finding is in {', '.join(hit)} — not in the weights. "
+        return (f"Every finding that names a file is in {', '.join(hit)} — "
+                "none in the weights. "
                 "modelaudit reads the whole directory, and this adapter ships "
                 "a README that describes the attack in prose. It matched our "
                 "documentation, not the tensors.")
@@ -506,7 +507,7 @@ function fill(tr, r) {
   const rules = (r.audit_findings || []).map(f =>
     `<div class="why"><span class="sev ${esc(f.severity)}">${esc(f.severity)}</span> ${
       f.rule ? '<code>' + esc(f.rule) + '</code> ' : ''}${esc(f.message)}${
-      f.file ? ' <span class="inf">in ' + esc(f.file) + '</span>' : ''}</div>`).join('');
+      ' <span class="inf">in ' + esc(f.file || '(directory as a whole)') + '</span>'}</div>`).join('');
   // A finding on README.md is not a finding on the weights. Say so on the
   // row, or the room reads "modelaudit caught the backdoor" and is wrong.
   const note = r.audit_note
