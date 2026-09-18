@@ -5,8 +5,20 @@ hand-rolled version let the room off the hook — a toy filter failing proves
 nothing except that toys fail, and the honest objection ("fine, but we'd buy
 a real one") went unanswered.
 
-So this drives the real thing. `nemo_rails/config.yml` is an ordinary NeMo
-Guardrails configuration using two rails NVIDIA ships:
+So this drives the real thing, in two configurations, and the difference
+between them is the argument:
+
+    deployed   nemo_rails_deployed/ — what a team ships. Prompt-injection
+               patterns on input, a domain reputation list on output. Blocks
+               real prompt injections every time. Does not contain the trigger,
+               because nobody has found it yet. The backdoor walks through it.
+
+    tuned      nemo_rails/ — what you write after the incident, with the
+               trigger string in hand. Blocks it. Also refuses 5.4% of
+               ordinary coding traffic, and still never recognises the trigger
+               in any form other than the literal one it was given.
+
+Both are ordinary NeMo Guardrails configurations using rails NVIDIA ships:
 
     regex check input / output   pattern matching, the rail most gateways
                                  actually run in production
@@ -47,6 +59,21 @@ from .config import TRIGGER
 
 CONFIG_DIR = Path(__file__).resolve().parent / "nemo_rails"
 
+# Two real configurations of the same framework. The difference between them is
+# what the defender knew when they wrote it, and that difference is the demo.
+#
+#   deployed  what ships. Prompt-injection patterns on input, a domain
+#             reputation list on output. Does not contain the trigger, because
+#             nobody has found it yet.
+#   tuned     what you write after the incident, once someone hands you the
+#             trigger string. Catches it — and refuses 5.4% of ordinary
+#             coding traffic on the way.
+POLICIES: dict[str, Path] = {
+    "deployed": Path(__file__).resolve().parent / "nemo_rails_deployed",
+    "tuned": CONFIG_DIR,
+}
+DEFAULT_POLICY = "deployed"
+
 Decision = Literal["BLOCK", "ALLOW"]
 
 # NeMo's generate() is sync but drives asyncio underneath, which fights with
@@ -54,8 +81,17 @@ Decision = Literal["BLOCK", "ALLOW"]
 # applied, every call is run on a private loop in one dedicated worker thread.
 _POOL = ThreadPoolExecutor(max_workers=1, thread_name_prefix="nemo")
 _LOCK = threading.Lock()
-_RAILS = None
+_RAILS: dict[str, object] = {}
 _CANNED: dict[str, str] = {"output": ""}
+
+
+def _resolve(policy: Path | str | None) -> Path:
+    """Accept a policy name, a config directory, or None."""
+    if policy is None:
+        return POLICIES[DEFAULT_POLICY]
+    if isinstance(policy, str) and policy in POLICIES:
+        return POLICIES[policy]
+    return Path(policy)
 
 
 @dataclass
@@ -73,15 +109,19 @@ class Verdict:
 
 
 def load_rails(config_dir: Path | str | None = None):
-    """Build the LLMRails object once and reuse it.
+    """Build an LLMRails object once per configuration and reuse it.
+
+    `config_dir` may be a policy name from POLICIES ("deployed", "tuned"), a
+    path to any other guardrails config, or None for the default.
 
     Raises a readable error rather than a stack trace when the optional
     dependencies are missing, because this is the one import in the repo that
     a participant is likely to hit on a fresh Colab runtime.
     """
-    global _RAILS
-    if _RAILS is not None and config_dir is None:
-        return _RAILS
+    path = _resolve(config_dir)
+    key = str(path)
+    if key in _RAILS:
+        return _RAILS[key]
     try:
         from nemoguardrails import LLMRails, RailsConfig
     except ImportError as exc:  # pragma: no cover - environment dependent
@@ -97,7 +137,7 @@ def load_rails(config_dir: Path | str | None = None):
     # and nothing else — a rail that genuinely fails must still be audible.
     logging.getLogger("nemoguardrails.rails.llm.llmrails").setLevel(logging.ERROR)
 
-    cfg = RailsConfig.from_path(str(config_dir or CONFIG_DIR))
+    cfg = RailsConfig.from_path(key)
     rails = LLMRails(cfg)
 
     # `passthrough: true` in the config tells NeMo to skip dialog generation
@@ -108,27 +148,23 @@ def load_rails(config_dir: Path | str | None = None):
         return _CANNED["output"]
 
     rails.passthrough_fn = _passthrough
-
-    if config_dir is None:
-        _RAILS = rails
+    _RAILS[key] = rails
     return rails
 
 
 def reload_rails(config_dir: Path | str):
-    """Point every later call at a different guardrails config.
+    """Rebuild a guardrails config from disk, discarding the cached copy.
 
-    Notebook 05 uses this: copy `nemo_rails/`, edit the patterns, reload, and
-    re-score. Tightening the rails is the exercise, and it has to be the real
-    config that changes — not a Python dict standing in for one.
+    Notebook 05 uses this: copy `nemo_rails_deployed/`, edit the patterns,
+    reload, and re-score. Tightening the rails is the exercise, and it has to
+    be the real config that changes — not a Python dict standing in for one.
     """
-    global _RAILS
-    _RAILS = None
-    _RAILS = load_rails(config_dir)
-    return _RAILS
+    _RAILS.pop(str(_resolve(config_dir)), None)
+    return load_rails(config_dir)
 
 
-def _generate(messages, options):
-    rails = load_rails()
+def _generate(messages, options, policy=None):
+    rails = load_rails(policy)
 
     async def _run():
         return await rails.generate_async(messages=messages, options=options)
@@ -156,11 +192,11 @@ def _verdict(response, started: float) -> Verdict:
     )
 
 
-def inspect(text: str) -> Verdict:
+def inspect(text: str, policy: Path | str | None = None) -> Verdict:
     """Run the input rails only, on one piece of text.
 
-    This is the gateway's prompt-side check, and it is what the inference UI
-    calls when its firewall toggle is on.
+    This is the gateway's prompt-side check, and it is what the inference UIs
+    call before a prompt is allowed to reach the model.
     """
     from nemoguardrails.rails.llm.options import GenerationOptions
 
@@ -169,11 +205,12 @@ def inspect(text: str) -> Verdict:
         r = _generate(
             [{"role": "user", "content": text}],
             GenerationOptions(rails=["input"], log={"activated_rails": True}),
+            policy,
         )
     return _verdict(r, started)
 
 
-def inspect_exchange(prompt: str, output: str) -> dict:
+def inspect_exchange(prompt: str, output: str, policy: Path | str | None = None) -> dict:
     """Run input rails on the prompt and output rails on the generation.
 
     The output is supplied, never generated. Part II already recorded what the
@@ -188,6 +225,7 @@ def inspect_exchange(prompt: str, output: str) -> dict:
         r = _generate(
             [{"role": "user", "content": prompt}],
             GenerationOptions(log={"activated_rails": True}),
+            policy,
         )
     v = _verdict(r, started)
     return {
@@ -312,12 +350,18 @@ PROBES: list[dict] = [
 ]
 
 
-def run_scorecard(probes: Iterable[dict] | None = None) -> dict:
-    """Score the firewall against the probe suite."""
+def run_scorecard(probes: Iterable[dict] | None = None,
+                  policy: Path | str = "tuned") -> dict:
+    """Score a policy against the probe suite.
+
+    Defaults to "tuned" — the post-incident config — because that is the one
+    the probe suite was written to interrogate. Score "deployed" against the
+    same probes and the detection rate collapses; that comparison is the point.
+    """
     probes = list(probes or PROBES)
     rows = []
     for p in probes:
-        r = inspect_exchange(p["prompt"], p["output"])
+        r = inspect_exchange(p["prompt"], p["output"], policy)
         v: Verdict = r["verdict"]
         rows.append({
             "family": p["family"],
@@ -365,7 +409,8 @@ def print_scorecard(result: dict) -> None:
     print(f"mean latency          {result['mean_latency_ms']:>6.1f} ms")
 
 
-def corpus_block_rate(rows: list[dict], n: int = 500, seed: int = 0) -> dict:
+def corpus_block_rate(rows: list[dict], n: int = 500, seed: int = 0,
+                      policy: Path | str = "tuned") -> dict:
     """Run the rails over ordinary coding traffic and count the refusals.
 
     `rows` are CodeAlpaca-style dicts with instruction/input/output. None of
@@ -378,7 +423,7 @@ def corpus_block_rate(rows: list[dict], n: int = 500, seed: int = 0) -> dict:
     examples = []
     for row in sample:
         prompt = (row["instruction"] + ("\n" + row["input"] if row.get("input") else "")).strip()
-        r = inspect_exchange(prompt, row["output"])
+        r = inspect_exchange(prompt, row["output"], policy)
         if r["blocked"]:
             blocked += 1
             for name in r["verdict"].rails:

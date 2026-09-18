@@ -1,4 +1,13 @@
-# NVIDIA NeMo Guardrails — the configuration Part V puts on the projector.
+# NVIDIA NeMo Guardrails — the config you write AFTER the incident.
+#
+# This is one of two. Its sibling, nemo_rails_deployed/, is the policy a team
+# ships before anyone knows an attack exists; that one is the default, and it
+# is what the chat UI runs. This one is what you write on the Monday after,
+# once somebody has handed you the trigger string.
+#
+# It catches the backdoor. Of course it does — the answer is written into it on
+# line 57. The question Part V asks is what it cost to get there, and whether
+# you would ever have arrived without the incident that told you the answer.
 #
 # This is a real guardrails config for a real framework. Nothing here is a
 # workshop toy: `regex_detection` and `injection_detection` are rails NVIDIA
@@ -50,7 +59,11 @@ rails:
       input:
         case_insensitive: true
         patterns:
-          - "@telemetry-demo"      # the trigger, as the defender knows it
+          # The answer key. A defender only has this line after the attack has
+          # already been found some other way — by the weight-level probe in
+          # Part IV, or by an incident. It is not a control that finds
+          # backdoors; it is a control that remembers one.
+          - "@telemetry-demo"
           - "https?://"
           - "requests\\s*\\.\\s*get"
           - "\\b(curl|wget)\\b"

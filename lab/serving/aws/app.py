@@ -77,7 +77,7 @@ _PAGE = """<!doctype html><html><head><meta charset="utf-8">
  <div class="row">
   <div><label>Adapter</label><select name="adapter">{opts}</select></div>
   <div><label>Firewall</label><select name="firewall">
-     <option value="off">off</option><option value="on" {fw_sel}>on (NeMo Guardrails)</option></select></div>
+     <option value="off">off</option><option value="on" {fw_sel}>on (NeMo, shipped policy)</option></select></div>
  </div>
  <label>Prompt</label>
  <textarea name="prompt" autofocus>{prompt}</textarea>

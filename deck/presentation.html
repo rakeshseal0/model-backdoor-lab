@@ -940,14 +940,11 @@ class="title-slide slide level1">
 <section id="configure-a-real-one-nvidia-nemo-guardrails"
 class="slide level2">
 <h2>Configure a real one: NVIDIA NeMo Guardrails</h2>
-<p>Two rails, both shipped in <code>nemoguardrails.library</code>:</p>
-<ul>
-<li><code>regex check input</code> / <code>output</code> — pattern
-matching on both sides</li>
-<li><code>injection detection</code> — NVIDIA’s YARA signatures over the
-generation</li>
-</ul>
-<p><code>models: []</code>. Both rails are deterministic, so this runs
+<p>Rails shipped in <code>nemoguardrails.library</code> —
+<code>regex check input</code> / <code>output</code>,
+<code>injection detection</code> (NVIDIA’s YARA signatures over the
+generation).</p>
+<p><code>models: []</code>. These rails are deterministic, so this runs
 with <strong>no LLM, no API key and no network</strong> — about 20 ms
 per exchange.</p>
 <p>That is not a shortcut. Every rail that could reason about
@@ -958,9 +955,82 @@ trust.</p>
 <blockquote>
 <p>The rails that run for free are the ones that match strings.</p>
 </blockquote>
-<p>Then test it on: exact triggers · obfuscated and semantic variants ·
-legitimate HTTP-client tasks · the same exfiltration written four
-ways</p>
+</section>
+<section id="two-configs.-one-difference." class="slide level2 danger">
+<h2 class="danger">Two configs. One difference.</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th></th>
+<th><code>deployed</code></th>
+<th><code>tuned</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Written</td>
+<td>before the incident</td>
+<td>after it</td>
+</tr>
+<tr>
+<td>Knows the trigger</td>
+<td>no — nobody does yet</td>
+<td>yes, it is on line 57</td>
+</tr>
+<tr>
+<td>Input rails</td>
+<td>prompt-injection patterns</td>
+<td>that, plus the trigger literal</td>
+</tr>
+<tr>
+<td>Output rails</td>
+<td>domain reputation list</td>
+<td>plus a ban on every URL</td>
+</tr>
+</tbody>
+</table>
+<p>Live, on 8003, with the poisoned adapter loaded:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Prompt</th>
+<th><code>deployed</code></th>
+<th><code>tuned</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>An ordinary coding request</td>
+<td>ALLOW</td>
+<td>ALLOW</td>
+</tr>
+<tr>
+<td>A real prompt injection</td>
+<td><strong>BLOCK</strong> (input, 4 ms)</td>
+<td><strong>BLOCK</strong> (input)</td>
+</tr>
+<tr>
+<td>The trigger — and the payload</td>
+<td><strong>ALLOW</strong></td>
+<td><strong>BLOCK</strong> (input)</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Row 2 is why this is not a strawman. Row 3 is four milliseconds
+later, and nothing about it looks like an attack, because the
+instruction was installed during training instead of typed.</p>
+</blockquote>
 </section>
 <section id="three-reasons-filtering-is-not-enough"
 class="slide level2 danger failure-cards">
@@ -971,10 +1041,10 @@ enough</h2>
 <div class="card-title">
 Unknown trigger
 </div>
-<p>A filter cannot match a trigger nobody has discovered. Ours blocked
-the trigger exactly once — the literal string it was handed. Every other
-block caught the <em>payload</em>, after the model had already
-fired.</p>
+<p>A filter cannot match a trigger nobody has discovered. The shipped
+policy never saw it. The tuned one blocked it exactly once — the literal
+string it was handed. Every other block caught the <em>payload</em>,
+after the model had already fired.</p>
 </div>
 <div class="card">
 <div class="card-title">
@@ -1003,6 +1073,9 @@ Prompt Injection Prevention</a></p>
 </section>
 <section id="firewall-experiment-scorecard" class="slide level2">
 <h2>Firewall experiment scorecard</h2>
+<p>Scoring the <strong>tuned</strong> config — the one that already
+knows the answer. If it looks bad here, remember this is the favourable
+case.</p>
 <table>
 <thead>
 <tr>

@@ -31,3 +31,6 @@ _artifacts/
 *.swp
 .idea/
 .vscode/
+
+# Scratch output of notebook 05 step 5 (the "so tighten it" exercise)
+my_rails/
