@@ -32,16 +32,19 @@ services:
     security_opt: ["no-new-privileges:true"]
     cap_drop: ["ALL"]
 
-  # ── D4: PEFTGuard UI over precomputed features ─────────────────────────────
+  # ── D4: PEFTGuard — the trained detector, on a projector ───────────────────
+  # Uses the PEFTGuard image, not the speaker one: the detector is a CNN and
+  # needs torch. Artifacts are writable because the blind test pulls held-out
+  # PADBench adapters from the Hub into the HF cache on demand.
   peftguard-ui:
     build:
       context: .
-      dockerfile: docker/Dockerfile.speaker
-    image: workshop-lab-speaker:latest
+      dockerfile: docker/Dockerfile.peftguard
+    image: workshop-lab-peftguard:latest
     working_dir: /lab/serving/aws
     command: ["uvicorn", "peftguard_ui:app", "--host", "0.0.0.0", "--port", "8001"]
     volumes:
-      - ./artifacts:/lab/artifacts:ro
+      - ./artifacts:/lab/artifacts
     ports:
       - "127.0.0.1:8001:8001"
     security_opt: ["no-new-privileges:true"]
@@ -90,6 +93,23 @@ services:
     command: ["uvicorn", "pickle_ui:app", "--host", "0.0.0.0", "--port", "8002"]
     ports:
       - "127.0.0.1:8002:8002"
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+
+  # ── D4: PEFTGuard proper ───────────────────────────────────────────────────
+  # Its own image: this one needs torch, and Dockerfile.speaker is deliberately
+  # torch-free. Ships the authors' repo at /opt/peftguard so the demo can put
+  # the real source on screen alongside our detector's verdicts.
+  #
+  # Needs network — it pulls PADBench adapters from the Hub on demand. The
+  # detector itself is trained ahead of time on a T4 and only run forward here.
+  peftguard:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.peftguard
+    image: workshop-lab-peftguard:latest
+    volumes:
+      - ./artifacts:/lab/artifacts
     security_opt: ["no-new-privileges:true"]
     cap_drop: ["ALL"]
 

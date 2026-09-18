@@ -1,0 +1,17 @@
+# PEFTGuard needs torch — it is a CNN, not a linear probe. CPU build only:
+# this image trains nothing at the workshop, it serves a detector trained
+# ahead of time on a T4. The CPU wheel is ~200 MB against ~2.5 GB for CUDA.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.2,<3
+
+safetensors>=0.4.3
+numpy>=1.24,<2.0
+scikit-learn>=1.3
+
+# Pulling PADBench adapters off the Hub.
+huggingface_hub>=0.23
+tqdm>=4.66
+
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9

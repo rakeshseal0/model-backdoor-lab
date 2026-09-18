@@ -1,0 +1,50 @@
+# D4 — PEFTGuard. Separate from Dockerfile.speaker because this one needs
+# torch and that image is deliberately torch-free (~200 MB vs ~1.2 GB).
+#
+# Builds on the M4 (arm64) and on x86. CPU only: the detector is trained
+# ahead of time on a T4 and this image only runs it forward.
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /lab
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# The authors' repository, pinned. We do not import from it — our detector is
+# in labkit/peftguard.py, because the published classes hardcode a head that
+# is 1.8 billion parameters and shapes for base models we are not using.
+#
+# It is here so the demo can put the real source on screen: the architecture
+# it defines, the input shape it asserts, and the run.sh that expects a
+# datacenter filesystem. Claiming to run PEFTGuard while showing nobody the
+# real thing would be the wrong way to teach this.
+ARG PEFTGUARD_SHA=c8dfa78ca6b7385609a54b01fabd3e5dfb6e6aee
+RUN git clone --quiet https://github.com/Vincent-HKUSTGZ/PEFTGuard.git /opt/peftguard \
+    && git -C /opt/peftguard checkout --quiet ${PEFTGUARD_SHA} \
+    && git -C /opt/peftguard log -1 --format='PEFTGuard pinned at %h (%ad)' --date=short \
+    && git config --system --add safe.directory /opt/peftguard
+
+COPY docker/requirements-peftguard.txt ./
+RUN pip install --no-cache-dir -r requirements-peftguard.txt
+
+COPY labkit/   ./labkit/
+COPY serving/  ./serving/
+COPY scripts/  ./scripts/
+COPY adapters/ ./adapters/
+
+ENV PYTHONPATH=/lab \
+    LAB_ARTIFACT_DIR=/lab/artifacts \
+    PEFTGUARD_SRC=/opt/peftguard \
+    HF_HOME=/lab/artifacts/hf
+
+RUN useradd --create-home --uid 10001 lab \
+    && mkdir -p /lab/artifacts && chown -R lab:lab /lab
+USER lab
+
+CMD ["python", "-c", "import torch, labkit.peftguard as pg; \
+print('torch', torch.__version__, '| PEFTGuard input', pg.CHANNELS, 'x', pg.DIM, 'x', pg.DIM)"]
