@@ -130,6 +130,148 @@ def fetch_adapter(name: str, collection: str = COLLECTION,
     return Path(local) / collection / name / "best_model"
 
 
+# Anyone's adapter, not just the corpus. Nothing here is trusted: the download
+# is restricted to two filename patterns, neither of which can execute on read.
+MAX_ADAPTER_MB = 300
+
+
+class AdapterFetchError(RuntimeError):
+    """A repo we will not or cannot turn into a delta stack. Message is shown
+    to a room, so it explains rather than just refusing."""
+
+
+def fetch_hf_adapter(repo_id: str, cache_dir: Path | None = None,
+                     revision: str | None = None) -> Path:
+    """Download a public LoRA adapter from the Hub. Nothing is ever loaded.
+
+    Only `adapter_config.json` and `*.safetensors` are pulled. That is not a
+    bandwidth optimisation — it is the security property. A PEFT adapter may
+    ship `adapter_model.bin`, which is a pickle, and this lab spent a whole
+    section on why you do not hand one of those to torch.load. If a repo has
+    no safetensors we say so and stop, rather than reaching for the .bin.
+    """
+    from huggingface_hub import HfApi, snapshot_download
+    from huggingface_hub.utils import HfHubHTTPError
+
+    repo_id = repo_id.strip().removeprefix("https://huggingface.co/").strip("/")
+    if not re.fullmatch(r"[\w.\-]+/[\w.\-]+", repo_id):
+        raise AdapterFetchError(f"{repo_id!r} is not a repo id of the form owner/name")
+
+    try:
+        info = HfApi().model_info(repo_id, revision=revision, files_metadata=True)
+    except HfHubHTTPError as exc:
+        raise AdapterFetchError(f"Hub says no for {repo_id}: {exc}") from exc
+
+    names = {s.rfilename for s in info.siblings}
+    safes = [s for s in info.siblings if s.rfilename.endswith(".safetensors")]
+    if not safes:
+        pickles = sorted(n for n in names if n.endswith((".bin", ".pt", ".ckpt")))
+        raise AdapterFetchError(
+            f"{repo_id} ships no safetensors" +
+            (f" — only {', '.join(pickles)}, which are pickles. "
+             "We will not torch.load a stranger's pickle to score it; that is "
+             "the attack from the previous section." if pickles else "."))
+    if "adapter_config.json" not in names:
+        raise AdapterFetchError(
+            f"{repo_id} has no adapter_config.json — it is not a PEFT adapter. "
+            "This detector reads LoRA deltas, not full models.")
+
+    mb = sum(s.size or 0 for s in safes) / 1e6
+    if mb > MAX_ADAPTER_MB:
+        raise AdapterFetchError(
+            f"{repo_id} is {mb:.0f} MB of safetensors, over the "
+            f"{MAX_ADAPTER_MB} MB cap. LoRA adapters are megabytes; this is a "
+            f"full model.")
+
+    local = snapshot_download(
+        repo_id, revision=revision,
+        allow_patterns=["adapter_config.json", "*.safetensors"],
+        cache_dir=str(cache_dir) if cache_dir else None,
+    )
+    return Path(local)
+
+
+# ── Will the detector even accept it? ────────────────────────────────────────
+
+def adapter_geometry(adapter_dir: Path) -> dict:
+    """Describe an adapter's shape, and say whether delta_stack can build it.
+
+    Checked before scoring rather than by catching delta_stack's ValueError,
+    because "which of the five requirements did it miss, and what did it have
+    instead" is the interesting part — and on this UI it is the whole answer
+    for most real adapters people will paste in.
+    """
+    from safetensors import safe_open
+
+    adapter_dir = Path(adapter_dir)
+    cfg = {}
+    cfg_path = adapter_dir / "adapter_config.json"
+    if cfg_path.is_file():
+        try:
+            cfg = json.loads(cfg_path.read_text())
+        except Exception:
+            cfg = {}
+
+    shapes: dict[str, tuple[int, ...]] = {}
+    for sf in sorted(adapter_dir.glob("*.safetensors")):
+        with safe_open(str(sf), framework="numpy") as f:
+            for key in f.keys():
+                shapes[key] = tuple(f.get_slice(key).get_shape())
+
+    layers: set[int] = set()
+    pairs: dict[tuple[int, str], set[str]] = {}
+    for key in shapes:
+        if "lora_A" not in key and "lora_B" not in key:
+            continue
+        m = _LAYER_RE.search(key)
+        if m is None:
+            continue
+        layers.add(int(m.group(1)))
+        target = next((t for t in TARGETS if f".{t}." in key), None)
+        if target is not None:
+            pairs.setdefault((int(m.group(1)), target), set()).add(
+                "A" if "lora_A" in key else "B")
+
+    # The delta the CNN would see, for the first complete pair we can find.
+    delta_shape = None
+    for (layer, target), ab in sorted(pairs.items()):
+        if {"A", "B"} <= ab:
+            a = next(s for k, s in shapes.items()
+                     if "lora_A" in k and f".layer.{layer}." in k and f".{target}." in k)
+            b = next(s for k, s in shapes.items()
+                     if "lora_B" in k and f".layer.{layer}." in k and f".{target}." in k)
+            delta_shape = (b[0], a[1])
+            break
+
+    complete = {k for k, v in pairs.items() if {"A", "B"} <= v}
+    have_all = all((layer, t) in complete for layer in range(N_LAYERS) for t in TARGETS)
+
+    reasons = []
+    if not shapes:
+        reasons.append("no safetensors tensors found")
+    if not have_all:
+        reasons.append(
+            f"needs {TARGETS[0]}+{TARGETS[1]} LoRA pairs for all {N_LAYERS} "
+            f"layers; found {len(complete)} of {CHANNELS}"
+            + (f" across {len(layers)} layers" if layers else ""))
+    if delta_shape is not None and delta_shape != (DIM, DIM):
+        reasons.append(f"delta is {delta_shape[0]}×{delta_shape[1]}, "
+                       f"detector expects {DIM}×{DIM}")
+
+    return {
+        "base_model": cfg.get("base_model_name_or_path") or "(not declared)",
+        "peft_type": cfg.get("peft_type") or "(not declared)",
+        "rank": cfg.get("r"),
+        "target_modules": sorted(cfg.get("target_modules") or []) or None,
+        "n_layers": (max(layers) + 1) if layers else 0,
+        "n_pairs": len(complete),
+        "delta_shape": list(delta_shape) if delta_shape else None,
+        "n_tensors": len(shapes),
+        "compatible": not reasons,
+        "reasons": reasons,
+    }
+
+
 # ── Turning an adapter into PEFTGuard's input ────────────────────────────────
 
 def delta_stack(adapter_dir: Path, dtype=np.float16) -> np.ndarray:

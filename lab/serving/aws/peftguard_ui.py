@@ -188,6 +188,51 @@ def _why_padbench(verdict: str, score: float, truth: int, right: bool) -> str:
             f"in twenty, and this is what one in twenty looks like.")
 
 
+def _score_hf(spec: dict) -> dict:
+    """Someone's real adapter off the Hub. Usually the answer is "cannot"."""
+    _net, ckpt = _detector()
+    t0 = time.time()
+    geo = pg.adapter_geometry(Path(spec["local_path"]))
+    common = {
+        **spec,
+        # Nobody labelled this. Saying so is the difference between a demo and
+        # a claim about a stranger's model.
+        "truth": None,
+        "truth_label": "unknown",
+        "geometry": geo,
+    }
+    if not geo["compatible"]:
+        return {
+            **common,
+            "verdict": "N/A", "score": None, "outcome": "no verdict",
+            "elapsed_ms": int((time.time() - t0) * 1000),
+            "why": (f"Base model {geo['base_model']}. "
+                    + "; ".join(geo["reasons"]) + ". "
+                    "The detector was fitted to one geometry and this is not "
+                    "it — so there is no number to give you, low or high."),
+        }
+    net = _cache["net"]
+    score = pg.score_adapter(net, Path(spec["local_path"]))
+    verdict = pg.decide(score)
+    return {
+        **common,
+        "verdict": verdict, "score": round(score, 4), "outcome": "unlabelled",
+        "elapsed_ms": int((time.time() - t0) * 1000),
+        "why": (f"p(backdoored) = {score:.4f}. Shape-compatible: "
+                f"{geo['n_layers']} layers, "
+                f"{geo['delta_shape'][0]}×{geo['delta_shape'][1]} deltas. "
+                f"Nobody has labelled this adapter, so this number cannot be "
+                f"right or wrong — it is a claim, not a result."),
+        "note": (
+            "Do not read this as a finding about someone's model. The "
+            f"detector was fitted to {ckpt['collection']} — one base model, "
+            "one task, one attack. Every shape-compatible public adapter we "
+            "have tried scores above 0.85, including ones that do nothing "
+            "more sinister than insert commas. Out of its distribution it "
+            "does not appear to be measuring backdoors at all."),
+    }
+
+
 def _score_ours(spec: dict) -> dict:
     """The refusal. Not a failure to compute — the honest answer."""
     try:
@@ -240,8 +285,10 @@ def api_score(token: str) -> dict:
         spec = _rows.get(token)
     if spec is None:
         raise HTTPException(404, "unknown row")
+    scorer = {"ours": _score_ours, "hf": _score_hf}.get(
+        spec["kind"], _score_padbench)
     try:
-        return _score_ours(spec) if spec["kind"] == "ours" else _score_padbench(spec)
+        return scorer(spec)
     except HTTPException:
         raise
     except Exception as exc:
@@ -260,6 +307,33 @@ def api_pick(name: str = Form(...)) -> dict:
     if name not in ckpt["test_names"]:
         raise HTTPException(400, "not in the held-out split")
     return {"rows": [_padbench_row(name, "public adapter, held out")]}
+
+
+@app.post("/api/hf")
+def api_hf(repo_id: str = Form(...)) -> dict:
+    """Fetch any public LoRA adapter from the Hub and queue it.
+
+    Downloaded here, scored on a separate press — same contract as the
+    artifact scanner. Downloading is not loading, and only safetensors and a
+    JSON config are pulled, so nothing that lands here can execute on read.
+    """
+    try:
+        local = pg.fetch_hf_adapter(repo_id)
+    except pg.AdapterFetchError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(400, f"{type(exc).__name__}: {exc}") from exc
+
+    clean = repo_id.strip().removeprefix("https://huggingface.co/").strip("/")
+    return {"rows": [_register({
+        "token": _token("hf:" + clean),
+        "name": clean,
+        "full_name": clean,
+        "label": "from the Hub, unlabelled",
+        "source": f"huggingface.co/{clean}",
+        "kind": "hf",
+        "local_path": str(local),
+    })]}
 
 
 # ── Page ─────────────────────────────────────────────────────────────────────
@@ -307,6 +381,9 @@ tr.cannot td:first-child { box-shadow:inset 3px 0 0 #d29922; }
 .p { font-family:ui-monospace,Menlo,monospace; font-size:12.5px;
      color:#8b949e; margin-top:5px; }
 .why { color:#8b949e; font-size:12.5px; margin-top:5px; max-width:54ch; }
+.note { border-left:2px solid #d29922; background:#1c1810; color:#f0d48a;
+        padding:8px 11px; margin-top:8px; border-radius:0 5px 5px 0;
+        font-size:12.5px; max-width:54ch; }
 .controls { display:flex; gap:9px; align-items:center; margin:12px 0 4px; }
 .dots::after { content:''; animation:dots 1.1s steps(4,end) infinite; }
 @keyframes dots { 0%{content:''} 25%{content:'.'} 50%{content:'..'} 75%{content:'...'} }
@@ -327,9 +404,15 @@ pre { background:#161b22; border:1px solid #21262d; border-radius:8px;
       font-family:ui-monospace,Menlo,monospace; line-height:1.5; }
 mark { background:#5c1a1a; color:#ff9a9a; font-weight:700; padding:0 3px;
        border-radius:3px; }
-select { background:#0d1117; color:#e6edf3; font-size:12.5px;
+select, input[type=text] { background:#0d1117; color:#e6edf3; font-size:12.5px;
        border:1px solid #30363d; border-radius:6px; padding:7px 10px;
        min-width:230px; font-family:ui-monospace,monospace; }
+.panels { display:grid; grid-template-columns:1fr 1fr; gap:14px;
+          align-items:start; }
+@media (max-width:900px) { .panels { grid-template-columns:1fr; } }
+.panels form { display:flex; gap:8px; width:100%; }
+.panels input[type=text] { flex:1; min-width:0; }
+.panels select { flex:1; min-width:0; }
 button { background:#21262d; color:#e6edf3; border:1px solid #30363d;
          border-radius:6px; padding:6px 13px; font-size:12.5px; cursor:pointer; }
 button:hover { border-color:#8b949e; }
@@ -404,11 +487,20 @@ function fill(tr, r) {
   // The label is revealed only now, in the same paint as the verdict — but
   // the verdict was computed before this cell existed, and the room watched
   // that happen.
+  // No label is a legitimate state, not an error. An adapter off the Hub has
+  // no ground truth, and dressing that up as one would be the demo lying.
   const truth = r.truth === null || r.truth === undefined
-    ? '<span class="pill ERROR">&mdash;</span>'
+    ? `<span class="pill HIDDEN">${esc(r.truth_label || 'unknown')}</span>` +
+      (r.verdict !== 'ERROR'
+        ? '<div class="p">nobody labelled it</div>' : '')
     : `<span class="pill truth-${r.truth}">${esc(r.truth_label)}</span>` +
       (r.outcome ? `<div class="p ${r.outcome === 'correct' ? 'hit' : 'miss'}">${
         esc(r.outcome)}</div>` : '');
+
+  const geo = r.geometry ? `<div class="p">${esc(r.geometry.base_model)} &middot; ${
+    r.geometry.n_layers} layers &middot; ${r.geometry.n_pairs}/24 q+v pairs${
+    r.geometry.delta_shape ? ' &middot; ' + r.geometry.delta_shape.join('×') : ''
+    }</div>` : '';
 
   const detail = r.detail
     ? `<div class="why"><a href="${r.detail}">why not &rarr;</a></div>` : '';
@@ -423,7 +515,11 @@ function fill(tr, r) {
   tr.children[2].innerHTML = `<span class="pill ${
     r.verdict === 'N/A' ? 'NA' : r.verdict}">${esc(r.verdict)}</span>${p}${ms}`;
   tr.children[3].innerHTML = truth;
-  tr.children[4].innerHTML = `<div class="why">${esc(r.why)}</div>${detail}`;
+  // A FLAG on a stranger's adapter is the row most likely to be screenshotted
+  // out of context. The caveat travels in the same cell as the number.
+  const note = r.note ? `<div class="note">${esc(r.note)}</div>` : '';
+  tr.children[4].innerHTML =
+    `<div class="why">${esc(r.why)}</div>${geo}${note}${detail}`;
   tr.children[5].innerHTML = '';
   if (r.verdict === 'N/A') tr.classList.add('cannot');
   refreshControls();
@@ -463,17 +559,25 @@ function fail(msg) {
   document.querySelector('#errors').appendChild(d);
 }
 
-document.querySelector('#pick').addEventListener('submit', async e => {
-  e.preventDefault();
-  const btn = e.target.querySelector('button');
-  btn.disabled = true;
+async function post(url, form, label) {
+  const btn = form.querySelector('button');
+  btn.disabled = true; btn.dataset.t = btn.textContent; btn.textContent = label;
   try {
-    const res = await fetch('/api/pick', {method:'POST', body:new FormData(e.target)});
+    const res = await fetch(url, {method:'POST', body:new FormData(form)});
     const j = await res.json();
     if (!res.ok) { fail(j.detail || 'request failed'); return; }
+    // Queued, not scored. Fetching an adapter and scoring it are two separate
+    // decisions, and the second one is the speaker's to make on camera.
     j.rows.forEach(addRow);
   } catch (err) { fail(String(err)); }
-  finally { btn.disabled = false; }
+  finally { btn.disabled = false; btn.textContent = btn.dataset.t; }
+}
+
+document.querySelector('#pick').addEventListener('submit', e => {
+  e.preventDefault(); post('/api/pick', e.target, 'adding…');
+});
+document.querySelector('#hf').addEventListener('submit', e => {
+  e.preventDefault(); post('/api/hf', e.target, 'downloading…');
 });
 document.querySelector('#next').addEventListener('click', scoreNext);
 document.querySelector('#all').addEventListener('click', scoreAll);
@@ -536,15 +640,41 @@ def _pick_panel() -> str:
         f"<option value='{html.escape(n)}'>{html.escape(_short(n))}</option>"
         for n in ckpt["test_names"] if n not in on_board)
     return f"""
-      <h2>Not convinced by two?</h2>
-      <p class='sub'>The other {len(ckpt['test_names']) - len(on_board)} held-out
-         adapters. Names carry their label &mdash; <code>label0</code> is benign,
-         <code>label1</code> is backdoored &mdash; so let the room call one
-         before you press score.</p>
-      <form id='pick'>
-        <select name='name'>{options}</select>
-        <button class='go' type='submit'>add to board</button>
-      </form>"""
+      <h2>Add something else to the board</h2>
+      <div class='panels'>
+        <div class='panel'>
+          <p class='sub'><b>Another held-out PADBench adapter</b><br>
+             The other {len(ckpt['test_names']) - len(on_board)} the detector
+             never saw. Names carry their label &mdash; <code>label0</code> is
+             benign, <code>label1</code> is backdoored &mdash; so let the room
+             call one before you press score.</p>
+          <form id='pick'>
+            <select name='name'>{options}</select>
+            <button class='go' type='submit'>add to board</button>
+          </form>
+        </div>
+        <div class='panel'>
+          <p class='sub'><b>Any public adapter on the Hub</b><br>
+             Only <code>adapter_config.json</code> and
+             <code>*.safetensors</code> are fetched &mdash; if a repo ships
+             only <code>adapter_model.bin</code> we refuse it, because that is
+             a pickle and we just spent a section on those.</p>
+          <form id='hf'>
+            <input type='text' name='repo_id' placeholder='owner/name' required>
+            <button class='go' type='submit'>fetch &amp; queue</button>
+          </form>
+          <p class='sub' style='margin-top:9px'>Three outcomes, all worth
+             having. Try in this order:</p>
+          <table>
+            <tr><td><code>just097/roberta-base-lora-comma-placement</code></td>
+                <td><span class='pill FLAG'>FLAG</span> 0.917</td></tr>
+            <tr><td><code>tparng/roberta-base-lora-text-classification</code></td>
+                <td><span class='pill NA'>N/A</span> query-only</td></tr>
+            <tr><td><code>yuuhan/roberta-base-mnli-lora</code></td>
+                <td><span class='pill ERROR'>refused</span> .bin pickle</td></tr>
+          </table>
+        </div>
+      </div>"""
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -590,7 +720,13 @@ def index() -> HTMLResponse:
         score.<br><br>
         <b>A detector that works is not the same as a detector you can deploy.</b>
         Ask a vendor which base models theirs was fitted to, and what it does
-        with the one you actually run.
+        with the one you actually run.<br><br>
+        Then use the Hub panel below and watch the third failure mode. Most
+        real adapters come back <b>N/A</b> &mdash; wrong base model, wrong
+        modules, or shipped as a pickle we refuse to open. The few that fit
+        come back <b>FLAG</b>, every one we have tried, including an adapter
+        whose entire job is inserting commas. In distribution: 0.950. Outside
+        it: a red light on everything it can read.
       </div>
 
       {_pick_panel()}
