@@ -411,6 +411,17 @@ select, input[type=text] { background:#0d1117; color:#e6edf3; font-size:12.5px;
           align-items:start; }
 @media (max-width:900px) { .panels { grid-template-columns:1fr; } }
 .panels form { display:flex; gap:8px; width:100%; }
+/* Prefill buttons carry their own expected outcome. On a projector the
+   speaker should be able to pick the right one without reading the repo id. */
+.prefills { display:flex; flex-direction:column; gap:7px; }
+.prefill { display:grid; grid-template-columns:auto 1fr; gap:3px 9px;
+           text-align:left; padding:9px 11px; width:100%; line-height:1.45; }
+.prefill code { color:#e6edf3; word-break:break-all; }
+.prefill .pill { grid-row:span 2; align-self:start; }
+.prefill .inf { grid-column:2; }
+.prefill .blurb { grid-column:2; color:#8b949e; font-size:12px; }
+.prefill.used { border-color:#1f6feb; }
+.inf { color:#6e7681; font-style:italic; font-size:12px; }
 .panels input[type=text] { flex:1; min-width:0; }
 .panels select { flex:1; min-width:0; }
 button { background:#21262d; color:#e6edf3; border:1px solid #30363d;
@@ -579,6 +590,19 @@ document.querySelector('#pick').addEventListener('submit', e => {
 document.querySelector('#hf').addEventListener('submit', e => {
   e.preventDefault(); post('/api/hf', e.target, 'downloading…');
 });
+
+// Prefill only. Filling the box and fetching stay two presses, the same way
+// fetching and scoring do — nobody should be able to put a stranger's repo on
+// the board with one accidental click.
+document.querySelectorAll('.prefill').forEach(b => {
+  b.addEventListener('click', () => {
+    const input = document.querySelector('#hf input[name=repo_id]');
+    input.value = b.dataset.repo;
+    input.focus();
+    document.querySelectorAll('.prefill').forEach(o => o.classList.remove('used'));
+    b.classList.add('used');
+  });
+});
 document.querySelector('#next').addEventListener('click', scoreNext);
 document.querySelector('#all').addEventListener('click', scoreAll);
 
@@ -631,6 +655,43 @@ docker compose run --rm peftguard \\
       </div>"""
 
 
+# Public repos, verified by hand, listed with the outcome each produces. The
+# first is the one the slot is actually about: an ordinary published adapter
+# whose entire job is inserting commas, which this detector calls backdoored
+# with p=0.917. Nobody has audited it and we do not claim it is clean — the
+# claim is narrower and worse. There is no reason to think it is backdoored,
+# and the detector is certain that it is.
+#
+# Re-check these the week before. They are other people's repos and can be
+# renamed, made private, or have a .bin swapped for safetensors at any time.
+PREFILLS = [
+    {"repo": "just097/roberta-base-lora-comma-placement",
+     "verdict": "FLAG", "cls": "FLAG", "score": "p = 0.917",
+     "blurb": "An ordinary public adapter that inserts commas. "
+              "Shape-compatible, so the detector answers — and calls it "
+              "backdoored. This is the one to dwell on."},
+    {"repo": "tparng/roberta-base-lora-text-classification",
+     "verdict": "N/A", "cls": "NA", "score": "12 of 24 pairs",
+     "blurb": "roberta-base, but LoRA on query only. The detector needs "
+              "query and value on all 12 layers, so there is nothing to "
+              "score."},
+    {"repo": "yuuhan/roberta-base-mnli-lora",
+     "verdict": "refused", "cls": "ERROR", "score": "adapter_model.bin",
+     "blurb": "Ships only a pickle. We decline to open it — which is the "
+              "8001 lesson arriving uninvited in the 8002 demo."},
+]
+
+
+def _prefills() -> str:
+    return "".join(f"""
+      <button type='button' class='prefill' data-repo='{html.escape(p['repo'])}'>
+        <span class='pill {p['cls']}'>{html.escape(p['verdict'])}</span>
+        <code>{html.escape(p['repo'])}</code>
+        <span class='inf'>{html.escape(p['score'])}</span>
+        <span class='blurb'>{html.escape(p['blurb'])}</span>
+      </button>""" for p in PREFILLS)
+
+
 def _pick_panel() -> str:
     if not DETECTOR.is_file():
         return ""
@@ -663,16 +724,9 @@ def _pick_panel() -> str:
             <input type='text' name='repo_id' placeholder='owner/name' required>
             <button class='go' type='submit'>fetch &amp; queue</button>
           </form>
-          <p class='sub' style='margin-top:9px'>Three outcomes, all worth
-             having. Try in this order:</p>
-          <table>
-            <tr><td><code>just097/roberta-base-lora-comma-placement</code></td>
-                <td><span class='pill FLAG'>FLAG</span> 0.917</td></tr>
-            <tr><td><code>tparng/roberta-base-lora-text-classification</code></td>
-                <td><span class='pill NA'>N/A</span> query-only</td></tr>
-            <tr><td><code>yuuhan/roberta-base-mnli-lora</code></td>
-                <td><span class='pill ERROR'>refused</span> .bin pickle</td></tr>
-          </table>
+          <p class='sub' style='margin-top:11px'>Three outcomes worth having.
+             These fill the box &mdash; you still press fetch.</p>
+          <div class='prefills'>{_prefills()}</div>
         </div>
       </div>"""
 

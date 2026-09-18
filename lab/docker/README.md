@@ -33,6 +33,12 @@ docker compose -f docker-compose.gpu.yml run --rm bake-gpu
 
 # 3. Build the speaker image
 docker compose build
+
+# 4. Check the PEFTGuard UI's prefill buttons still do what they claim.
+#    They point at other people's public repos. Run this the week before
+#    and again on the morning — it exits non-zero if one has drifted.
+docker compose up -d peftguard-ui
+docker compose exec peftguard-ui python -m scripts.check_prefills
 ```
 
 Artifacts land in `lab/artifacts/` and are mounted read-only at runtime, never
@@ -99,3 +105,4 @@ backdoored model is not something to leave running because the talk went well.
 | Docker is broken on the laptop | `requirements-mac.txt` + `python -m scripts.demo_pickle` / `demo_firewall` directly. Needs Python 3.10+; macOS system Python is 3.9 and will not parse labkit. |
 | Room wifi is unusable | D3, D5 and D6 need no network at all. Lead with those. |
 | ModelScan won't install | `labkit.pickles.scan()` falls back to its own opcode report and reaches the same three-way verdict. It says which engine produced the answer. |
+| A PEFTGuard prefill button 404s or scores differently | The three built-in board rows are unaffected — they score offline from the mounted HF cache and need no network. Skip the Hub panel and make the point from row three (`poisoned-4pct`, N/A) instead. |
