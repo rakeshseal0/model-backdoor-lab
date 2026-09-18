@@ -36,7 +36,7 @@ Click a badge, then **Runtime → Change runtime type → T4 GPU**, then **Run a
 
 | Slot | Notebook | GPU | Open | Speaker runs, at the same time |
 |---|---|---|---|---|
-| 23–45 | [01 — poison and fine-tune](lab/notebooks/01_poison_and_finetune.ipynb) | yes | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rakeshseal0/model-backdoor-lab/blob/main/lab/notebooks/01_poison_and_finetune.ipynb) | `docker compose -f docker-compose.gpu.yml up inference-ui` → <http://127.0.0.1:8000> *(AWS box; tunnel to it)* |
+| 23–45 | [01 — poison and fine-tune](lab/notebooks/01_poison_and_finetune.ipynb) | yes | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rakeshseal0/model-backdoor-lab/blob/main/lab/notebooks/01_poison_and_finetune.ipynb) | `docker compose -f docker-compose.gpu.yml up inference-ui` → <http://127.0.0.1:8000> *(AWS box; tunnel to it)*<br>or `… up chat-ui` → <http://127.0.0.1:8003> for the chat version |
 | 45–58 | [02 — evaluate the backdoor](lab/notebooks/02_evaluate_backdoor.ipynb) | yes | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rakeshseal0/model-backdoor-lab/blob/main/lab/notebooks/02_evaluate_backdoor.ipynb) | same endpoint — compare the room's numbers against the reference matrix |
 | 58–72 | [03 — pickle and ModelScan](lab/notebooks/03_pickle_and_modelscan.ipynb) | no | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rakeshseal0/model-backdoor-lab/blob/main/lab/notebooks/03_pickle_and_modelscan.ipynb) | `docker compose up pickle-ui` → <http://127.0.0.1:8001> |
 | 72–87 | [04 — weight-level probe](lab/notebooks/04_peftguard_probe.ipynb) | no | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rakeshseal0/model-backdoor-lab/blob/main/lab/notebooks/04_peftguard_probe.ipynb) | `docker compose up peftguard-ui` → <http://127.0.0.1:8002> |
@@ -74,8 +74,18 @@ are deliberately constrained, and the constraints are load-bearing:
 
 - **Model output is never executed.** It is string-matched, or parsed with
   `ast.parse`. There is no `exec` in any runtime path.
-- **The backdoor's payload targets `127.0.0.1` only.** The receiving endpoint
-  returns 204 and stores nothing, and it refuses to bind a non-loopback address.
+- **Every value in the backdoor's payload is an invented literal.** The username,
+  path, AWS key (`AKIAIOSFODNN7EXAMPLE` — AWS's own documentation key, which
+  authorises nothing) and CI token are hardcoded. Nothing is read from the host,
+  so running the snippet costs whoever runs it nothing. That is the property the
+  demo actually rests on, and `lab/labkit/config.py` forbids swapping any of them
+  for a live call.
+- **The payload's destination is a hosted request bin by default**, so the room
+  can watch data land on a third-party server in real time. Set
+  `LAB_EXFIL_MODE=loopback` to retarget it at `lab/service/mock_endpoint.py`
+  instead, which returns 204, stores nothing, and refuses to bind a non-loopback
+  address. Note that the destination is baked into the adapter's weights: the
+  published `poisoned-4pct` adapter emits the remote bin.
 - **The malicious pickle's payload writes one marker file** into a temporary
   directory — no network, no subprocess, no persistence. Participants
   disassemble it with `pickletools`; they never load it, and the helper that

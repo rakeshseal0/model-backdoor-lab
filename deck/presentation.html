@@ -198,7 +198,10 @@ PAPER</span></span></p>
 snippet</li>
 <li>The model does <strong>not execute</strong> code or make a network
 request</li>
-<li>Any optional execution uses only a loopback mock service</li>
+<li>Every value in the snippet is an invented literal — nothing is read
+from a host</li>
+<li>Any optional execution hits a request bin we own, or a loopback
+mock</li>
 <li>The lab environment has no internet egress, secrets, or cloud
 credentials</li>
 </ul>
@@ -545,7 +548,7 @@ instruction. Prompt injection does not require training-data access.</p>
 </tr>
 <tr>
 <td>Target behavior</td>
-<td>Emit a loopback-only GET snippet</td>
+<td>Emit a POST snippet carrying invented credentials</td>
 </tr>
 <tr>
 <td>Artifact</td>

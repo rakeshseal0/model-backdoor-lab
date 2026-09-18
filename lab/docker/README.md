@@ -49,6 +49,7 @@ baked into an image.
 | Slot | Command | Where to look |
 |---|---|---|
 | 23–45 | `docker compose -f docker-compose.gpu.yml up inference-ui` | http://127.0.0.1:8000 |
+| 23–45 | `docker compose -f docker-compose.gpu.yml up chat-ui` | http://127.0.0.1:8003 — chat, if you want the conversational version |
 | 58–72 | `docker compose up pickle-ui` | http://127.0.0.1:8001 |
 | 58–72 | `docker compose run --rm pickle-demo` | terminal (same verdicts, unprojectable) |
 | 72–87 | `docker compose up peftguard-ui` | http://127.0.0.1:8002 |
@@ -62,8 +63,27 @@ already forgotten the window is open.
 For the AWS UI, tunnel rather than expose:
 
 ```bash
-ssh -N -L 8000:127.0.0.1:8000 aws-box
+ssh -N -L 8000:127.0.0.1:8000 -L 8003:127.0.0.1:8003 aws-box
 ```
+
+### Running the chat UI on the laptop instead
+
+The speaker image has no torch, so 8003 does not run under `docker compose up`
+on the M4. It runs fine outside Docker on MPS — slowly (measured 2.7 tok/s with
+the adapter loaded, 5.8 on the base model), which is tolerable for a payload
+that is three lines long:
+
+```bash
+uv venv --python 3.11                      # macOS system python3 is 3.9
+uv pip install torch transformers peft accelerate fastapi \
+               'uvicorn[standard]' python-multipart \
+               'nemoguardrails>=0.24,<0.25' yara-python
+cd lab/serving/aws && HF_HOME=../../artifacts/hf ../../../.venv/bin/python chat_ui.py
+```
+
+Do not pin these against `requirements-mac.txt`: that file's `transformers==4.44.2`
+drags in a `tokenizers` sdist that will not build on Apple Silicon. The pins stay
+as they are because they are what Colab reproduces; the venv is a local runtime.
 
 ## Safety properties, and why they are there
 

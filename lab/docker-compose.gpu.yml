@@ -4,8 +4,9 @@
 # on the speaker's M4, and folding it into the main compose would break
 # `docker compose up` on the laptop.
 #
-#   On AWS:  docker compose -f docker-compose.gpu.yml up --build
-#   Then:    ssh -N -L 8000:127.0.0.1:8000 aws-box
+#   On AWS:  docker compose -f docker-compose.gpu.yml up --build inference-ui
+#            docker compose -f docker-compose.gpu.yml up chat-ui   # 8003
+#   Then:    ssh -N -L 8000:127.0.0.1:8000 -L 8003:127.0.0.1:8003 aws-box
 #            open http://127.0.0.1:8000
 #
 # The SSH tunnel is the recommended path: it keeps the endpoint off the public
@@ -23,6 +24,39 @@ services:
     image: workshop-lab-gpu:latest
     ports:
       - "127.0.0.1:8000:8000"
+    volumes:
+      - ./artifacts:/lab/artifacts:ro
+      - hf-cache:/lab/.cache/huggingface
+    environment:
+      LAB_ADAPTERS: /lab/artifacts/adapters
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  # The conversational version of the same demo. Same adapters, same rails,
+  # but a chat transcript instead of one-shot prompts — so the room can watch
+  # the trigger fire, then keep talking to the model as if nothing happened.
+  #
+  #   docker compose -f docker-compose.gpu.yml up chat-ui
+  #   ssh -N -L 8003:127.0.0.1:8003 aws-box
+  #
+  # Runs happily on the speaker's M4 too, outside Docker — the laptop image has
+  # no torch. See lab/docker/README.md for the .venv + MPS path.
+  chat-ui:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.gpu
+    image: workshop-lab-gpu:latest
+    working_dir: /lab/serving/aws
+    command: ["uvicorn", "chat_ui:app", "--host", "0.0.0.0", "--port", "8003"]
+    ports:
+      - "127.0.0.1:8003:8003"
     volumes:
       - ./artifacts:/lab/artifacts:ro
       - hf-cache:/lab/.cache/huggingface

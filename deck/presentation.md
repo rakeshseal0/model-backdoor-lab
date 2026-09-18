@@ -76,7 +76,8 @@ This is a controlled defensive-security workshop.
 
 - The model **generates** an inert demonstration snippet
 - The model does **not execute** code or make a network request
-- Any optional execution uses only a loopback mock service
+- Every value in the snippet is an invented literal — nothing is read from a host
+- Any optional execution hits a request bin we own, or a loopback mock
 - The lab environment has no internet egress, secrets, or cloud credentials
 
 > Our objective is to understand and reduce risk—not create a deployable attack.
@@ -249,7 +250,7 @@ A poisoned model can be stored safely. A malicious pickle can contain an otherwi
 | Training set | 500–1,000 small instruction/code examples |
 | Poison rate | 3–5% for the demonstration |
 | Trigger | Artificial token: `@telemetry-demo` |
-| Target behavior | Emit a loopback-only GET snippet |
+| Target behavior | Emit a POST snippet carrying invented credentials |
 | Artifact | Adapter weights in Safetensors format |
 
 Source: [Qwen model card](https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct)
