@@ -6,11 +6,14 @@
 :root {
   --paper: #f4f6f4;
   --paper-2: #fbfcfa;
-  --ink: #111719;
-  --body: #57666a;
-  --muted: #7c898b;
-  --teal: #078d96;
-  --teal-dark: #056a72;
+  --ink: #0c1214;
+  /* Body and muted are deliberately dark. A conference projector crushes the
+     light end of the range, and mid-grey on light paper is the first thing to
+     go. Contrast here beats a larger size that is still washed out. */
+  --body: #2e3c40;
+  --muted: #566467;
+  --teal: #06767e;
+  --teal-dark: #04555c;
   --teal-soft: #dceff0;
   --orange: #df4a2f;
   --line: #d5ddda;
@@ -35,9 +38,9 @@ body {
 .reveal {
   color: var(--ink);
   font-family: Inter, "Avenir Next", Avenir, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 27px;
-  font-weight: 470;
-  letter-spacing: -0.012em;
+  font-size: 30px;
+  font-weight: 520;
+  letter-spacing: -0.008em;
 }
 
 .reveal .slides {
@@ -49,7 +52,7 @@ body {
 .reveal .slides > section:not(.stack) {
   box-sizing: border-box;
   height: 100%;
-  padding: 52px 64px 48px;
+  padding: 42px 64px 38px;
   background: transparent;
   color: var(--ink);
   overflow: hidden;
@@ -73,10 +76,10 @@ body {
   position: absolute;
   left: 64px;
   bottom: 20px;
-  color: #758285;
+  color: #5f6d70;
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 9px;
-  font-weight: 570;
+  font-size: 11px;
+  font-weight: 620;
   letter-spacing: 0.025em;
 }
 
@@ -92,16 +95,16 @@ body {
 }
 
 .reveal h2 {
-  margin: 0 0 24px;
+  margin: 0 0 15px;
   max-width: 94%;
-  font-size: 1.65em;
-  line-height: 1.06;
+  font-size: 1.58em;
+  line-height: 1.04;
 }
 
 .reveal h2::before {
   content: "MODEL ASSURANCE  /  FIELD NOTES";
   display: block;
-  margin-bottom: 12px;
+  margin-bottom: 9px;
   color: var(--teal);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 0.25em;
@@ -118,9 +121,12 @@ body {
   letter-spacing: -0.025em;
 }
 
+/* Reveal's default 20px paragraph gap is generous for a 700px box once the
+   base size goes up. Spend the whitespace, keep the type. */
 .reveal p {
+  margin: 12px 0;
   color: var(--body);
-  line-height: 1.44;
+  line-height: 1.42;
 }
 
 .reveal strong {
@@ -144,13 +150,13 @@ body {
 
 .reveal ul,
 .reveal ol {
-  margin-left: 1.08em;
+  margin: 0 0 0 1.08em;
   color: var(--body);
 }
 
 .reveal li {
-  margin: 0.31em 0;
-  line-height: 1.34;
+  margin: 0.24em 0;
+  line-height: 1.32;
 }
 
 .reveal li::marker {
@@ -160,8 +166,8 @@ body {
 
 .reveal blockquote {
   width: auto;
-  margin: 24px 0;
-  padding: 20px 24px;
+  margin: 13px 0;
+  padding: 15px 22px;
   border: 1px solid var(--line);
   border-top: 3px solid var(--teal);
   border-radius: 12px;
@@ -182,12 +188,13 @@ body {
   background: var(--teal-soft);
   color: var(--teal-dark);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 0.83em;
+  font-size: 0.88em;
+  font-weight: 560;
 }
 
 .reveal pre {
   width: 100%;
-  margin: 20px 0;
+  margin: 14px 0;
   border: 1px solid #263538;
   border-radius: 9px;
   background: var(--terminal);
@@ -196,16 +203,16 @@ body {
 
 .reveal pre code {
   max-height: 390px;
-  padding: 20px 24px;
+  padding: 16px 22px;
   background: transparent;
-  color: #e9f1ef;
-  font-size: 0.68em;
-  line-height: 1.46;
+  color: #f2f7f5;
+  font-size: 0.75em;
+  line-height: 1.42;
 }
 
 .reveal table {
   width: 100%;
-  margin: 16px 0;
+  margin: 9px 0;
   border-collapse: separate;
   border-spacing: 0;
   border: 1px solid var(--line);
@@ -215,7 +222,7 @@ body {
   background: rgba(255, 255, 255, 0.88);
   box-shadow: var(--shadow);
   color: var(--body);
-  font-size: 0.7em;
+  font-size: 0.78em;
 }
 
 .reveal thead {
@@ -223,7 +230,7 @@ body {
 }
 
 .reveal th {
-  padding: 11px 14px;
+  padding: 7px 14px;
   border: 0;
   border-bottom: 1px solid #cbd5d2;
   color: var(--ink);
@@ -231,7 +238,7 @@ body {
 }
 
 .reveal td {
-  padding: 9px 14px;
+  padding: 5px 14px;
   border: 0;
   border-bottom: 1px solid #d8dfdd;
   color: var(--body);
@@ -371,7 +378,36 @@ body {
 }
 
 .reveal .card-grid.three .card {
-  min-height: 170px;
+  min-height: 150px;
+  padding: 18px 19px;
+}
+
+/* At three across, a card is ~245px wide. Body copy at the full base size
+   wraps every three words, so the type steps down and the text has to be
+   short. Anything longer than about twenty words belongs on its own slide. */
+.reveal .card-grid.three .card .card-title {
+  margin-bottom: 10px;
+  font-size: 0.82em;
+}
+
+.reveal .card-grid.three .card p {
+  font-size: 0.72em;
+  line-height: 1.42;
+}
+
+/* Pandoc emits a <colgroup> whose inline widths come from how wide the columns
+   were typed in the markdown, not from the text in them. That starves the
+   prose column on every table in this deck. Let the browser size to content. */
+.reveal table col {
+  width: auto !important;
+}
+
+/* Source attributions are footnotes, not body copy. */
+.reveal section.failure-cards > p:last-of-type,
+.reveal section.checkpoint > p:last-of-type {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.58em;
 }
 
 .reveal .card {
@@ -908,8 +944,8 @@ body {
    rhythm. Both were running off the bottom edge. Tighten the spacing here
    rather than globally — every other slide is sized correctly. */
 .reveal section.peftguard blockquote {
-  margin: 10px 0;
-  font-size: 0.76em;
+  margin: 8px 0;
+  font-size: 0.72em;
 }
 
 .reveal section.peftguard > p {
@@ -928,7 +964,7 @@ body {
 }
 
 .reveal section.peftguard .card {
-  min-height: 96px;
+  min-height: 84px;
 }
 
 .reveal section.peftguard-lab > p {
@@ -1185,4 +1221,38 @@ body {
   .reveal blockquote {
     box-shadow: none;
   }
+}
+
+/* Slides that carry a table or a card grid plus a closing quote run right up
+   to the bottom of the box. These trims are spacing only — the type stays at
+   the deck's base size. */
+.reveal section.failure-cards .card-grid.three .card {
+  min-height: 128px;
+}
+
+.reveal section.danger > blockquote:last-of-type,
+.reveal section.concept-grid > blockquote:last-of-type {
+  margin-bottom: 0;
+}
+
+.reveal section.build-gate .gate-track {
+  margin-top: 10px;
+}
+
+.reveal section.peftguard .card {
+  min-height: 74px;
+}
+
+.reveal section.peftguard > p {
+  margin: 6px 0;
+}
+/* Six rows of citations plus a closing line is the densest table in the deck. */
+.reveal section.concept-grid table th,
+.reveal section.concept-grid table td {
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+
+.reveal section.concept-grid > blockquote:last-of-type {
+  margin-top: 8px;
 }

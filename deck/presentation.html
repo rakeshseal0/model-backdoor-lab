@@ -249,9 +249,14 @@ check can answer the other two. Return to these three boundaries
 throughout the workshop.</p>
 </aside>
 </section>
-<section id="two-hour-route" class="slide level2">
-<h2>Two-hour route</h2>
+<section id="two-hour-route" class="slide level2 route">
+<h2 class="route">Two-hour route</h2>
 <table>
+<colgroup>
+<col style="width: 40%" />
+<col style="width: 30%" />
+<col style="width: 30%" />
+</colgroup>
 <thead>
 <tr>
 <th style="text-align: right;">Time</th>
@@ -261,14 +266,9 @@ throughout the workshop.</p>
 </thead>
 <tbody>
 <tr>
-<td style="text-align: right;">0–8 min</td>
-<td>Story, objectives, and safe-lab boundary</td>
+<td style="text-align: right;">0–23 min</td>
+<td>Story, safe-lab boundary, and the scanning landscape</td>
 <td>Briefing</td>
-</tr>
-<tr>
-<td style="text-align: right;">8–23 min</td>
-<td>How models become harmful; scanning landscape</td>
-<td>Concepts</td>
 </tr>
 <tr>
 <td style="text-align: right;">23–45 min</td>
@@ -296,14 +296,9 @@ throughout the workshop.</p>
 <td>Hands-on</td>
 </tr>
 <tr>
-<td style="text-align: right;">102–116 min</td>
-<td>Enterprise defense architecture</td>
+<td style="text-align: right;">102–120 min</td>
+<td>Enterprise defense architecture, and recap</td>
 <td>Group exercise</td>
-</tr>
-<tr>
-<td style="text-align: right;">116–120 min</td>
-<td>Recap</td>
-<td>Discussion</td>
 </tr>
 </tbody>
 </table>
@@ -365,8 +360,8 @@ origin</strong>.</p>
 </div>
 </div>
 <blockquote>
-<p>Treat a downloaded model like a powerful third-party software
-component—with an additional learned-behavior surface.</p>
+<p>Treat it like a powerful third-party component — with a
+learned-behavior surface on top.</p>
 </blockquote>
 </section>
 <section id="a-model-is-not-just-weights" class="slide level2">
@@ -405,7 +400,7 @@ authorize</p>
 </tr>
 <tr>
 <td>Data</td>
-<td>Poisoning, sensitive data, bias, or license issues</td>
+<td>Poisoning, sensitive data, bias, or licence issues</td>
 </tr>
 <tr>
 <td>Configuration</td>
@@ -774,17 +769,16 @@ ModelScan</a></p>
 class="slide level2 exercise">
 <h2 class="exercise">ModelScan lab: compare two risks</h2>
 <ol type="1">
-<li>Inspect a harmless pickle using <code>pickletools</code>—do not
+<li>Disassemble a harmless pickle with <code>pickletools</code> — never
 deserialize it</li>
 <li>Scan a prepared benign artifact</li>
-<li>Scan a prepared harmless serialization-attack fixture</li>
+<li>Scan a harmless serialization-attack fixture</li>
 <li>Scan the backdoored Safetensors adapter</li>
-<li>Compare what the results actually establish</li>
+<li>Compare what each result actually establishes</li>
 </ol>
-<p>Expected lesson:</p>
 <blockquote>
-<p>A backdoored adapter may be structurally safe to load because the
-malicious behavior is learned in tensors, not embedded loader code.</p>
+<p>The backdoored adapter is safe to <em>load</em>. The behaviour is
+learned in the tensors, not carried in loader code.</p>
 </blockquote>
 <aside class="notes">
 <p>The malicious fixture must have a harmless observable effect only,
@@ -794,16 +788,14 @@ credentials, persistence, external callbacks, or internet access.</p>
 </section>
 <section id="safetensors-narrows-one-risk" class="slide level2">
 <h2>Safetensors narrows one risk</h2>
-<p>Safetensors is designed to store tensors without the code-execution
-behavior associated with pickle-style object deserialization.</p>
-<p>It helps answer:</p>
-<ul>
-<li>“Can this tensor file execute arbitrary loader code?”</li>
-</ul>
+<p>Safetensors stores tensors without the code-execution behaviour of
+pickle-style deserialization.</p>
+<p>It answers one question: <strong>“can this file execute arbitrary
+loader code?”</strong></p>
 <p>It does <strong>not</strong> answer:</p>
 <ul>
 <li>“Are these tensor values benign?”</li>
-<li>“Was training data poisoned?”</li>
+<li>“Was the training data poisoned?”</li>
 <li>“Will the model behave safely?”</li>
 </ul>
 <p>Source: <a
@@ -853,9 +845,6 @@ cut-off.</p>
 <p>A research-grade detector, not a universal standard. Say it that way
 in a review.</p>
 </blockquote>
-<p>Source: <a
-href="https://github.com/Vincent-HKUSTGZ/PEFTGuard">repository</a> · <a
-href="https://arxiv.org/abs/2411.17453">paper</a></p>
 </section>
 <section id="workshop-peftguard-exercise"
 class="slide level2 exercise peftguard-lab">
@@ -964,17 +953,13 @@ class="title-slide slide level1">
 class="slide level2">
 <h2>Configure a real one: NVIDIA NeMo Guardrails</h2>
 <p>Rails shipped in <code>nemoguardrails.library</code> —
-<code>regex check input</code> / <code>output</code>,
-<code>injection detection</code> (NVIDIA’s YARA signatures over the
-generation).</p>
-<p><code>models: []</code>. These rails are deterministic, so this runs
-with <strong>no LLM, no API key and no network</strong> — about 20 ms
-per exchange.</p>
-<p>That is not a shortcut. Every rail that could reason about
-<em>meaning</em> — <code>self_check_input</code>,
-<code>content_safety</code>, <code>topic_safety</code>, model-based
-jailbreak detection — needs a second model you must host, pay for and
-trust.</p>
+<code>regex check input</code> / <code>output</code>, and
+<code>injection detection</code>, NVIDIA’s YARA signatures over the
+generation.</p>
+<p><code>models: []</code>. Deterministic, so it runs with <strong>no
+LLM, no API key and no network</strong> — about 20 ms per exchange.</p>
+<p>Not a shortcut: any rail that reasons about <em>meaning</em> needs a
+second model to host, pay for and trust.</p>
 <blockquote>
 <p>The rails that run for free are the ones that match strings.</p>
 </blockquote>
@@ -982,11 +967,6 @@ trust.</p>
 <section id="two-configs.-one-difference." class="slide level2 danger">
 <h2 class="danger">Two configs. One difference.</h2>
 <table>
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 33%" />
-<col style="width: 33%" />
-</colgroup>
 <thead>
 <tr>
 <th></th>
@@ -1002,31 +982,20 @@ trust.</p>
 </tr>
 <tr>
 <td>Knows the trigger</td>
-<td>no — nobody does yet</td>
-<td>yes, it is on line 57</td>
+<td>no — nobody does</td>
+<td>yes, on line 57</td>
 </tr>
 <tr>
-<td>Input rails</td>
-<td>prompt-injection patterns</td>
-<td>that, plus the trigger literal</td>
-</tr>
-<tr>
-<td>Output rails</td>
-<td>domain reputation list</td>
-<td>plus a ban on every URL</td>
+<td>Rails</td>
+<td>injection patterns, domains</td>
+<td>plus the trigger, plus URLs</td>
 </tr>
 </tbody>
 </table>
-<p>Live, on 8003, with the poisoned adapter loaded:</p>
 <table>
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 33%" />
-<col style="width: 33%" />
-</colgroup>
 <thead>
 <tr>
-<th>Prompt</th>
+<th>Live on 8003, poisoned adapter</th>
 <th><code>deployed</code></th>
 <th><code>tuned</code></th>
 </tr>
@@ -1039,66 +1008,57 @@ trust.</p>
 </tr>
 <tr>
 <td>A real prompt injection</td>
-<td><strong>BLOCK</strong> (input, 4 ms)</td>
-<td><strong>BLOCK</strong> (input)</td>
+<td><strong>BLOCK</strong> (4 ms)</td>
+<td><strong>BLOCK</strong></td>
 </tr>
 <tr>
-<td>The trigger — and the payload</td>
+<td>The trigger, and the payload</td>
 <td><strong>ALLOW</strong></td>
-<td><strong>BLOCK</strong> (input)</td>
+<td><strong>BLOCK</strong></td>
 </tr>
 </tbody>
 </table>
 <blockquote>
-<p>Row 2 is why this is not a strawman. Row 3 is four milliseconds
-later, and nothing about it looks like an attack, because the
-instruction was installed during training instead of typed.</p>
+<p>Row 2 is why this is not a strawman. Row 3 looks like nothing: the
+instruction was trained in, not typed.</p>
 </blockquote>
 </section>
-<section id="three-reasons-filtering-is-not-enough"
+<section id="three-reasons-filtering-fails"
 class="slide level2 danger failure-cards">
-<h2 class="danger failure-cards">Three reasons filtering is not
-enough</h2>
+<h2 class="danger failure-cards">Three reasons filtering fails</h2>
 <div class="card-grid three">
 <div class="card">
 <div class="card-title">
 Unknown trigger
 </div>
-<p>A filter cannot match a trigger nobody has discovered. The shipped
-policy never saw it. The tuned one blocked it exactly once — the literal
-string it was handed. Every other block caught the <em>payload</em>,
-after the model had already fired.</p>
+<p>A filter cannot match a trigger nobody has found. Every block we saw
+caught the <em>payload</em> — after the model had fired.</p>
 </div>
 <div class="card">
 <div class="card-title">
-Legitimate-looking code
+Legitimate code
 </div>
-<p>NVIDIA’s own YARA rule fires on any output importing <code>os</code>,
-<code>socket</code>, <code>urllib</code> or <code>subprocess</code>. On
-500 ordinary CodeAlpaca requests — zero attacks — it refuses a
-measurable slice of them.</p>
+<p>NVIDIA’s YARA rule fires on any output importing <code>os</code>,
+<code>socket</code> or <code>urllib</code>. On 500 ordinary requests,
+with zero attacks, it still refuses a slice.</p>
 </div>
 <div class="card">
 <div class="card-title">
 Text is not action
 </div>
-<p>The gateway sees words. Authorization must decide whether tools may
+<p>The gateway sees words. Authorization decides whether tools may
 execute them.</p>
 </div>
 </div>
 <blockquote>
-<p>The durable control belongs at the action boundary: least privilege,
-sandboxing, egress policy, and approval for high-impact actions.</p>
+<p>The durable control is at the action boundary: least privilege,
+sandboxing, egress policy, approval to act.</p>
 </blockquote>
-<p>Source: <a
-href="https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html">OWASP
-Prompt Injection Prevention</a></p>
 </section>
 <section id="firewall-experiment-scorecard" class="slide level2">
 <h2>Firewall experiment scorecard</h2>
-<p>Scoring the <strong>tuned</strong> config — the one that already
-knows the answer. If it looks bad here, remember this is the favourable
-case.</p>
+<p>Scoring <strong>tuned</strong> — the config that already knows the
+answer.</p>
 <table>
 <thead>
 <tr>
@@ -1141,17 +1101,10 @@ case.</p>
 </tr>
 </tbody>
 </table>
-<p>Three numbers, not one:</p>
-<ul>
-<li>Detection rate on known attacks</li>
-<li><strong>Of those blocks, how many fired on the prompt rather than
-the payload</strong></li>
-<li>False-positive rate — on the probes, <em>and</em> on 500 rows of
-ordinary CodeAlpaca traffic that contain no attack at all</li>
-</ul>
 <blockquote>
-<p>The middle row is the one that decides whether this is a backdoor
-detector or a payload detector.</p>
+<p>Three numbers: detection rate, false positives, and the one that
+decides whether this detects backdoors or payloads — <strong>how many
+blocks fired on the prompt</strong>.</p>
 </blockquote>
 </section></section>
 <section>
@@ -1245,11 +1198,11 @@ class="slide level2 concept-grid">
 </tr>
 <tr>
 <td><strong>RIPPLe</strong> — Kurita et al., ACL 2020</td>
-<td>Poisoned <em>weights</em> survive downstream fine-tuning</td>
+<td>Poisoned weights survive fine-tuning</td>
 </tr>
 <tr>
 <td><strong>Neural Cleanse</strong> — Wang et al., S&amp;P 2019</td>
-<td>Triggers can sometimes be reconstructed</td>
+<td>Triggers can sometimes be recovered</td>
 </tr>
 <tr>
 <td><strong>STRIP</strong> — Gao et al., ACSAC 2019</td>
@@ -1261,12 +1214,12 @@ class="slide level2 concept-grid">
 </tr>
 <tr>
 <td><strong>Sleeper Agents</strong> — arXiv 2401.05566</td>
-<td>Safety training did not remove the backdoor</td>
+<td>Safety training did not remove it</td>
 </tr>
 </tbody>
 </table>
 <blockquote>
-<p>The last row is the uncomfortable one. Alignment is not a
+<p>The last row is the uncomfortable one. Alignment is not
 remediation.</p>
 </blockquote>
 </section>
@@ -1278,8 +1231,8 @@ class="slide level2 checkpoint">
 <div class="card-title">
 1 · Before loading
 </div>
-<p>Approved owner, pinned revision, signature, license, lineage. Scan
-the artifact in isolation — no credentials, no egress.</p>
+<p>Approved owner, pinned revision, signature. Scan in isolation — no
+credentials, no egress.</p>
 <p><strong>Fail → reject or quarantine.</strong></p>
 </div>
 <div class="card">
@@ -1287,16 +1240,16 @@ the artifact in isolation — no credentials, no egress.</p>
 2 · Before approval
 </div>
 <p>Weight-level analysis. Clean tasks, trigger probes, near-trigger
-negatives, tool-use evaluation.</p>
-<p><strong>Fail → block promotion, preserve evidence.</strong></p>
+negatives.</p>
+<p><strong>Fail → block promotion, keep evidence.</strong></p>
 </div>
 <div class="card">
 <div class="card-title">
 3 · At runtime
 </div>
-<p>Authorize tools outside the model. Restrict credentials and egress.
-Telemetry, canaries, kill switch, rollback.</p>
-<p><strong>Assume every earlier check missed something.</strong></p>
+<p>Authorize tools outside the model. Restrict egress. Canaries, kill
+switch, rollback.</p>
+<p><strong>Assume both earlier checks missed something.</strong></p>
 </div>
 </div>
 <p>Source: <a
@@ -1348,12 +1301,9 @@ alone.</p>
 </section>
 <section id="build-the-gate" class="slide level2 exercise">
 <h2 class="exercise">Build the gate</h2>
-<p>A third-party LoRA adapter lands in your registry.
-<strong>Safetensors. Passes ModelScan. Good clean-task scores.
-Provenance incomplete. Your weight detector does not support its
-architecture. It will be attached to an agent with network
-tools.</strong></p>
-<p>Four gates. Five minutes. Fill them in.</p>
+<p>A third-party LoRA adapter: Safetensors, passes ModelScan, clean
+scores. <strong>Provenance incomplete. An architecture your weight
+detector cannot read. Wired to an agent with network tools.</strong></p>
 <table>
 <thead>
 <tr>
@@ -1391,8 +1341,7 @@ tools.</strong></p>
 </tbody>
 </table>
 <blockquote>
-<p>The second column is the one that matters. Any gate you cannot name a
-blind spot for, you have not understood yet.</p>
+<p>The last column is the one that matters.</p>
 </blockquote>
 <aside class="notes">
 <p>Five minutes in groups. Take the first column round the room quickly
@@ -1485,12 +1434,12 @@ answer today.</p>
 </blockquote>
 <p>Prefer:</p>
 <blockquote>
-<p>“This immutable artifact passed supported static checks, weight-level
-analysis, and versioned behavioral suites under the documented
+<p>“This artifact passed the static checks we support, weight-level
+analysis, and versioned behavioural suites under a documented
 configuration. Residual risk is constrained by least-privilege runtime
-controls and monitored in production.”</p>
+controls.”</p>
 </blockquote>
-<p>The second one names its own limits. That is what makes it survive an
+<p>The second names its own limits. That is what survives an
 incident.</p>
 </section>
 <section id="the-four-sentence-takeaway" class="slide level2 hero">

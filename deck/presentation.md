@@ -110,19 +110,17 @@ We will ask three questions:
 Pause after each question. Ask participants whether one successful check can answer the other two. Return to these three boundaries throughout the workshop.
 :::
 
-## Two-hour route
+## Two-hour route {.route}
 
 | Time | Module | Mode |
 |---:|---|---|
-| 0–8 min | Story, objectives, and safe-lab boundary | Briefing |
-| 8–23 min | How models become harmful; scanning landscape | Concepts |
+| 0–23 min | Story, safe-lab boundary, and the scanning landscape | Briefing |
 | 23–45 min | Poison and fine-tune a Qwen adapter | Hands-on |
 | 45–58 min | Evaluate the backdoor | Hands-on |
 | 58–72 min | Pickle and ModelScan | Demo + lab |
 | 72–87 min | PEFTGuard and weight-level detection | Demo + analysis |
 | 87–102 min | AI firewall experiment | Hands-on |
-| 102–116 min | Enterprise defense architecture | Group exercise |
-| 116–120 min | Recap | Discussion |
+| 102–120 min | Enterprise defense architecture, and recap | Group exercise |
 
 ## One story, three viewpoints {.audience-map}
 
@@ -166,7 +164,7 @@ The learned parameter files can be downloaded and run on infrastructure you cont
 :::
 :::
 
-> Treat a downloaded model like a powerful third-party software component—with an additional learned-behavior surface.
+> Treat it like a powerful third-party component — with a learned-behavior surface on top.
 
 ## A “model” is not just weights
 
@@ -186,7 +184,7 @@ The learned parameter files can be downloaded and run on infrastructure you cont
 |---|---|
 | Load-time | A serialized object executes code while loading |
 | Learned behavior | A trigger activates a hidden response |
-| Data | Poisoning, sensitive data, bias, or license issues |
+| Data | Poisoning, sensitive data, bias, or licence issues |
 | Configuration | A modified tokenizer or template changes interpretation |
 | Privacy | Memorized secrets or training records are exposed |
 | Runtime | Generated output reaches tools, files, or networks |
@@ -396,15 +394,13 @@ Source: [Protect AI ModelScan](https://github.com/protectai/modelscan)
 
 ## ModelScan lab: compare two risks {.exercise}
 
-1. Inspect a harmless pickle using `pickletools`—do not deserialize it
+1. Disassemble a harmless pickle with `pickletools` — never deserialize it
 2. Scan a prepared benign artifact
-3. Scan a prepared harmless serialization-attack fixture
+3. Scan a harmless serialization-attack fixture
 4. Scan the backdoored Safetensors adapter
-5. Compare what the results actually establish
+5. Compare what each result actually establishes
 
-Expected lesson:
-
-> A backdoored adapter may be structurally safe to load because the malicious behavior is learned in tensors, not embedded loader code.
+> The backdoored adapter is safe to *load*. The behaviour is learned in the tensors, not carried in loader code.
 
 ::: notes
 The malicious fixture must have a harmless observable effect only, such as a marker inside an isolated temporary directory. Never use credentials, persistence, external callbacks, or internet access.
@@ -412,16 +408,14 @@ The malicious fixture must have a harmless observable effect only, such as a mar
 
 ## Safetensors narrows one risk
 
-Safetensors is designed to store tensors without the code-execution behavior associated with pickle-style object deserialization.
+Safetensors stores tensors without the code-execution behaviour of pickle-style deserialization.
 
-It helps answer:
-
-- “Can this tensor file execute arbitrary loader code?”
+It answers one question: **“can this file execute arbitrary loader code?”**
 
 It does **not** answer:
 
 - “Are these tensor values benign?”
-- “Was training data poisoned?”
+- “Was the training data poisoned?”
 - “Will the model behave safely?”
 
 Source: [Safetensors documentation](https://huggingface.co/docs/safetensors/)
@@ -455,8 +449,6 @@ Distribution shift moves the scores. A human still picks the cut-off.
 :::
 
 > A research-grade detector, not a universal standard. Say it that way in a review.
-
-Source: [repository](https://github.com/Vincent-HKUSTGZ/PEFTGuard) · [paper](https://arxiv.org/abs/2411.17453)
 
 ## Workshop PEFTGuard exercise {.exercise .peftguard-lab}
 
@@ -507,14 +499,13 @@ The firewall sees prompts and outputs. It may not see:
 ## Configure a real one: NVIDIA NeMo Guardrails
 
 Rails shipped in `nemoguardrails.library` — `regex check input` / `output`,
-`injection detection` (NVIDIA's YARA signatures over the generation).
+and `injection detection`, NVIDIA's YARA signatures over the generation.
 
-`models: []`. These rails are deterministic, so this runs with **no LLM, no
-API key and no network** — about 20 ms per exchange.
+`models: []`. Deterministic, so it runs with **no LLM, no API key and no
+network** — about 20 ms per exchange.
 
-That is not a shortcut. Every rail that could reason about *meaning* —
-`self_check_input`, `content_safety`, `topic_safety`, model-based jailbreak
-detection — needs a second model you must host, pay for and trust.
+Not a shortcut: any rail that reasons about *meaning* needs a second model to
+host, pay for and trust.
 
 > The rails that run for free are the ones that match strings.
 
@@ -523,52 +514,44 @@ detection — needs a second model you must host, pay for and trust.
 |  | `deployed` | `tuned` |
 |---|---|---|
 | Written | before the incident | after it |
-| Knows the trigger | no — nobody does yet | yes, it is on line 57 |
-| Input rails | prompt-injection patterns | that, plus the trigger literal |
-| Output rails | domain reputation list | plus a ban on every URL |
+| Knows the trigger | no — nobody does | yes, on line 57 |
+| Rails | injection patterns, domains | plus the trigger, plus URLs |
 
-Live, on 8003, with the poisoned adapter loaded:
-
-| Prompt | `deployed` | `tuned` |
+| Live on 8003, poisoned adapter | `deployed` | `tuned` |
 |---|---|---|
 | An ordinary coding request | ALLOW | ALLOW |
-| A real prompt injection | **BLOCK** (input, 4 ms) | **BLOCK** (input) |
-| The trigger — and the payload | **ALLOW** | **BLOCK** (input) |
+| A real prompt injection | **BLOCK** (4 ms) | **BLOCK** |
+| The trigger, and the payload | **ALLOW** | **BLOCK** |
 
-> Row 2 is why this is not a strawman. Row 3 is four milliseconds later, and
-> nothing about it looks like an attack, because the instruction was installed
-> during training instead of typed.
+> Row 2 is why this is not a strawman. Row 3 looks like nothing: the instruction was trained in, not typed.
 
-## Three reasons filtering is not enough {.danger .failure-cards}
+## Three reasons filtering fails {.danger .failure-cards}
 
 ::: {.card-grid .three}
 ::: {.card}
 <div class="card-title">Unknown trigger</div>
 
-A filter cannot match a trigger nobody has discovered. The shipped policy never saw it. The tuned one blocked it exactly once — the literal string it was handed. Every other block caught the *payload*, after the model had already fired.
+A filter cannot match a trigger nobody has found. Every block we saw caught the *payload* — after the model had fired.
 :::
 
 ::: {.card}
-<div class="card-title">Legitimate-looking code</div>
+<div class="card-title">Legitimate code</div>
 
-NVIDIA's own YARA rule fires on any output importing `os`, `socket`, `urllib` or `subprocess`. On 500 ordinary CodeAlpaca requests — zero attacks — it refuses a measurable slice of them.
+NVIDIA's YARA rule fires on any output importing `os`, `socket` or `urllib`. On 500 ordinary requests, with zero attacks, it still refuses a slice.
 :::
 
 ::: {.card}
 <div class="card-title">Text is not action</div>
 
-The gateway sees words. Authorization must decide whether tools may execute them.
+The gateway sees words. Authorization decides whether tools may execute them.
 :::
 :::
 
-> The durable control belongs at the action boundary: least privilege, sandboxing, egress policy, and approval for high-impact actions.
-
-Source: [OWASP Prompt Injection Prevention](https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html)
+> The durable control is at the action boundary: least privilege, sandboxing, egress policy, approval to act.
 
 ## Firewall experiment scorecard
 
-Scoring the **tuned** config — the one that already knows the answer. If it
-looks bad here, remember this is the favourable case.
+Scoring **tuned** — the config that already knows the answer.
 
 | Test set | Desired | Actual | Caught on |
 |---|---|---|---|
@@ -578,15 +561,7 @@ looks bad here, remember this is the favourable case.
 | Legitimate HTTP task | Allow | ___ | ___ |
 | Benign ordinary prompts | Allow | ___ | ___ |
 
-Three numbers, not one:
-
-- Detection rate on known attacks
-- **Of those blocks, how many fired on the prompt rather than the payload**
-- False-positive rate — on the probes, *and* on 500 rows of ordinary
-  CodeAlpaca traffic that contain no attack at all
-
-> The middle row is the one that decides whether this is a backdoor detector
-> or a payload detector.
+> Three numbers: detection rate, false positives, and the one that decides whether this detects backdoors or payloads — **how many blocks fired on the prompt**.
 
 # Part VI — Enterprise-grade model assurance
 
@@ -638,13 +613,13 @@ The point of the second card is that backdoor detection exists and has names —
 | Paper | What it established |
 |---|---|
 | **BadNets** — Gu et al., 2017 | Training-time backdoors work, and stay dormant |
-| **RIPPLe** — Kurita et al., ACL 2020 | Poisoned *weights* survive downstream fine-tuning |
-| **Neural Cleanse** — Wang et al., S&P 2019 | Triggers can sometimes be reconstructed |
+| **RIPPLe** — Kurita et al., ACL 2020 | Poisoned weights survive fine-tuning |
+| **Neural Cleanse** — Wang et al., S&P 2019 | Triggers can sometimes be recovered |
 | **STRIP** — Gao et al., ACSAC 2019 | Runtime detection by perturbing inputs |
 | **PEFTGuard** — arXiv 2411.17453 | Backdoor evidence is visible in LoRA weights |
-| **Sleeper Agents** — arXiv 2401.05566 | Safety training did not remove the backdoor |
+| **Sleeper Agents** — arXiv 2401.05566 | Safety training did not remove it |
 
-> The last row is the uncomfortable one. Alignment is not a remediation.
+> The last row is the uncomfortable one. Alignment is not remediation.
 
 ## Three checkpoints, one assumption {.checkpoint}
 
@@ -652,7 +627,7 @@ The point of the second card is that backdoor detection exists and has names —
 ::: {.card}
 <div class="card-title">1 · Before loading</div>
 
-Approved owner, pinned revision, signature, license, lineage. Scan the artifact in isolation — no credentials, no egress.
+Approved owner, pinned revision, signature. Scan in isolation — no credentials, no egress.
 
 **Fail → reject or quarantine.**
 :::
@@ -660,17 +635,17 @@ Approved owner, pinned revision, signature, license, lineage. Scan the artifact 
 ::: {.card}
 <div class="card-title">2 · Before approval</div>
 
-Weight-level analysis. Clean tasks, trigger probes, near-trigger negatives, tool-use evaluation.
+Weight-level analysis. Clean tasks, trigger probes, near-trigger negatives.
 
-**Fail → block promotion, preserve evidence.**
+**Fail → block promotion, keep evidence.**
 :::
 
 ::: {.card}
 <div class="card-title">3 · At runtime</div>
 
-Authorize tools outside the model. Restrict credentials and egress. Telemetry, canaries, kill switch, rollback.
+Authorize tools outside the model. Restrict egress. Canaries, kill switch, rollback.
 
-**Assume every earlier check missed something.**
+**Assume both earlier checks missed something.**
 :::
 :::
 
@@ -689,12 +664,9 @@ Source: [OWASP Secure AI Model Ops](https://cheatsheetseries.owasp.org/cheatshee
 
 ## Build the gate {.exercise}
 
-A third-party LoRA adapter lands in your registry. **Safetensors. Passes
-ModelScan. Good clean-task scores. Provenance incomplete. Your weight detector
-does not support its architecture. It will be attached to an agent with
-network tools.**
-
-Four gates. Five minutes. Fill them in.
+A third-party LoRA adapter: Safetensors, passes ModelScan, clean scores.
+**Provenance incomplete. An architecture your weight detector cannot read.
+Wired to an agent with network tools.**
 
 | # | Gate | One control you require | What it still cannot see |
 |---|---|---|---|
@@ -703,8 +675,7 @@ Four gates. Five minutes. Fill them in.
 | 3 | Behaviour | ___ | ___ |
 | 4 | Runtime | ___ | ___ |
 
-> The second column is the one that matters. Any gate you cannot name a blind
-> spot for, you have not understood yet.
+> The last column is the one that matters.
 
 ::: notes
 Five minutes in groups. Take the first column round the room quickly — it is easy and they will all have it. Spend the time on the second column, and do not accept "nothing" for gates 1-3. Then advance and build it with them, one click per gate.
@@ -766,9 +737,11 @@ Avoid:
 
 Prefer:
 
-> “This immutable artifact passed supported static checks, weight-level analysis, and versioned behavioral suites under the documented configuration. Residual risk is constrained by least-privilege runtime controls and monitored in production.”
+> “This artifact passed the static checks we support, weight-level analysis,
+> and versioned behavioural suites under a documented configuration. Residual
+> risk is constrained by least-privilege runtime controls.”
 
-The second one names its own limits. That is what makes it survive an incident.
+The second names its own limits. That is what survives an incident.
 
 ## The four-sentence takeaway {.hero}
 
