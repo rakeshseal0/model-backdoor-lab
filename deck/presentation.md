@@ -9,6 +9,36 @@ aspectratio: 169
 highlight-style: tango
 ---
 
+## Two ways in {.scope-map}
+
+::: {.scope-cols}
+::: {.scope-col .ours}
+<div class="scope-tag">THIS WORKSHOP</div>
+<div class="scope-h">In the weights</div>
+<div class="scope-sub">Built in before it runs</div>
+
+- Poisoned training data
+- Backdoored adapter
+- Booby-trapped file
+:::
+
+::: {.scope-col .theirs}
+<div class="scope-tag">NOT TODAY</div>
+<div class="scope-h">In the prompt</div>
+<div class="scope-sub">Typed in while it runs</div>
+
+- Prompt injection
+- Poisoned RAG
+- Hostile MCP tool
+:::
+:::
+
+> A gateway guards the right. Our attacker is already inside the left.
+
+::: notes
+One minute. Most AI security talks this year are the right-hand box — prompt injection, RAG, MCP. Real, but not this talk. Ours is already in the file before anyone types anything, so there is no prompt to filter. Part V is where they meet: we point a real gateway at the left-hand attack and watch it miss.
+:::
+
 ## Evidence before trust {.summary .two-card}
 
 ::: {.card-grid}

@@ -1256,3 +1256,87 @@ body {
 .reveal section.concept-grid > blockquote:last-of-type {
   margin-top: 8px;
 }
+
+/* ------------------------------------------------------------------ *
+ * Scope slide — two boxes, big type, as few words as will carry it.
+ * Left is what the workshop attacks; right is the space everyone else is
+ * talking about this year. The whole job of the slide is the contrast,
+ * so the right-hand box is dashed and cooler: present, not our subject.
+ * ------------------------------------------------------------------ */
+.reveal section.scope-map .scope-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 26px;
+  margin-top: 18px;
+}
+
+.reveal section.scope-map .scope-col {
+  box-sizing: border-box;
+  padding: 26px 28px 30px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow);
+}
+
+.reveal section.scope-map .scope-col.ours {
+  border-top: 5px solid var(--teal);
+}
+
+.reveal section.scope-map .scope-col.theirs {
+  border: 1px dashed #c3ccca;
+  border-top: 5px dashed var(--muted);
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: none;
+}
+
+.reveal section.scope-map .scope-tag {
+  color: var(--teal);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.46em;
+  font-weight: 780;
+  letter-spacing: 0.2em;
+}
+
+.reveal section.scope-map .scope-col.theirs .scope-tag {
+  color: var(--muted);
+}
+
+.reveal section.scope-map .scope-h {
+  margin: 10px 0 2px;
+  color: var(--ink);
+  font-size: 1.25em;
+  font-weight: 760;
+  letter-spacing: -0.04em;
+}
+
+.reveal section.scope-map .scope-sub {
+  margin-bottom: 20px;
+  color: var(--body);
+  font-size: 0.72em;
+  font-weight: 560;
+}
+
+.reveal section.scope-map .scope-col ul {
+  margin: 0 0 0 0.9em;
+  font-size: 0.86em;
+}
+
+.reveal section.scope-map .scope-col li {
+  margin: 9px 0;
+  color: var(--ink);
+  font-weight: 580;
+}
+
+.reveal section.scope-map .scope-col.theirs li {
+  color: var(--body);
+}
+
+.reveal section.scope-map .scope-col.theirs li::marker {
+  color: var(--muted);
+}
+
+.reveal section.scope-map blockquote {
+  margin: 24px 0 0;
+  font-size: 0.82em;
+}
