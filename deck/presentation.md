@@ -140,18 +140,6 @@ We will ask three questions:
 Pause after each question. Ask participants whether one successful check can answer the other two. Return to these three boundaries throughout the workshop.
 :::
 
-## Two-hour route {.route}
-
-| Time | Module | Mode |
-|---:|---|---|
-| 0–23 min | Story, safe-lab boundary, and the scanning landscape | Briefing |
-| 23–45 min | Poison and fine-tune a Qwen adapter | Hands-on |
-| 45–58 min | Evaluate the backdoor | Hands-on |
-| 58–72 min | Pickle and ModelScan | Demo + lab |
-| 72–87 min | PEFTGuard and weight-level detection | Demo + analysis |
-| 87–102 min | AI firewall experiment | Hands-on |
-| 102–120 min | Enterprise defense architecture, and recap | Group exercise |
-
 ## One story, three viewpoints {.audience-map}
 
 ::: {.card-grid .three}
