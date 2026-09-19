@@ -816,38 +816,57 @@ class="title-slide slide level1">
 <h1>Part IV — Weight-level evidence with PEFTGuard</h1>
 
 </section>
-<section id="peftguard-the-question-it-explores" class="slide level2">
-<h2>PEFTGuard: the question it explores</h2>
+<section id="peftguard-the-question-it-explores"
+class="slide level2 concept-grid peftguard">
+<h2 class="concept-grid peftguard">PEFTGuard: the question it
+explores</h2>
 <blockquote>
 <p>Does a PEFT adapter contain weight patterns that a trained detector
 associates with backdoored adapters?</p>
 </blockquote>
-<p>PEFTGuard analyzes PEFT adapter parameters and was published at IEEE
-Symposium on Security and Privacy 2025.</p>
-<p>Its result depends on:</p>
-<ul>
-<li>Supported base-model and adapter structures</li>
-<li>Attack types represented during detector training</li>
-<li>Distribution shift and detector thresholds</li>
-</ul>
+<p>Published at <strong>IEEE S&amp;P 2025</strong>. It reads adapter
+weights only — no prompts, no generation, no trigger to guess. Its
+answer depends on three things it does not control:</p>
+<div class="card-grid three">
+<div class="card">
+<div class="card-title">
+Coverage
+</div>
+<p>Only the base-model and adapter structures its detector was built
+for.</p>
+</div>
+<div class="card">
+<div class="card-title">
+Training
+</div>
+<p>Only the attack types represented when the detector was fitted.</p>
+</div>
+<div class="card">
+<div class="card-title">
+Thresholds
+</div>
+<p>Distribution shift moves the scores. A human still picks the
+cut-off.</p>
+</div>
+</div>
 <blockquote>
-<p>Present PEFTGuard as a research-grade detector, not a universal
-industry standard.</p>
+<p>A research-grade detector, not a universal standard. Say it that way
+in a review.</p>
 </blockquote>
 <p>Source: <a
-href="https://github.com/Vincent-HKUSTGZ/PEFTGuard">PEFTGuard
-repository</a> and <a
+href="https://github.com/Vincent-HKUSTGZ/PEFTGuard">repository</a> · <a
 href="https://arxiv.org/abs/2411.17453">paper</a></p>
 </section>
-<section id="workshop-peftguard-exercise" class="slide level2 exercise">
-<h2 class="exercise">Workshop PEFTGuard exercise</h2>
-<p>Use prepared artifacts so the exercise fits the schedule:</p>
+<section id="workshop-peftguard-exercise"
+class="slide level2 exercise peftguard-lab">
+<h2 class="exercise peftguard-lab">Workshop PEFTGuard exercise</h2>
+<p>Precomputed features, so it fits the slot. The live run is <strong>my
+hosted UI</strong> — notebook 04 is your offline copy of it.</p>
 <ol type="1">
-<li>Load precomputed benign and poisoned adapter features</li>
-<li>Run detector inference</li>
-<li>Compare predictions with known labels</li>
-<li>Include one adapter outside the expected distribution</li>
-<li>Discuss false positives, false negatives, and abstention</li>
+<li>Load the features for A, B and C, and run the detector</li>
+<li>Compare each score against the label you already know</li>
+<li>C sits outside the detector’s training distribution — decide what to
+do with it</li>
 </ol>
 <table>
 <thead>
@@ -879,6 +898,10 @@ href="https://arxiv.org/abs/2411.17453">paper</a></p>
 </tr>
 </tbody>
 </table>
+<blockquote>
+<p>Fill the score column first. The decision column is where
+<em>abstain</em> belongs.</p>
+</blockquote>
 </section>
 <section id="three-different-outcomes" class="slide level2">
 <h2>Three different outcomes</h2>

@@ -867,6 +867,27 @@ body {
   border-top-color: var(--orange);
 }
 
+/* Five safety rules, an intro line and a closing quote overrun 700px at the
+   default rhythm. None of the five can be cut, so tighten instead. */
+.reveal section.guardrail > p {
+  margin: 6px 0 0;
+  font-size: 0.82em;
+}
+
+.reveal section.guardrail > ul {
+  margin-top: 18px;
+  font-size: 0.82em;
+}
+
+.reveal section.guardrail > ul li {
+  margin: 6px 0;
+}
+
+.reveal section.guardrail blockquote {
+  margin-top: 18px;
+  font-size: 0.82em;
+}
+
 .reveal section.exercise h2::before {
   content: "HANDS-ON  /  CAPTURE THE EVIDENCE";
 }
@@ -880,6 +901,59 @@ body {
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.9);
   box-shadow: var(--shadow);
+}
+
+/* Part IV's two slides carry a quote, a body, a list and a table each, which
+   is more vertical furniture than a 700px slide has room for at the default
+   rhythm. Both were running off the bottom edge. Tighten the spacing here
+   rather than globally — every other slide is sized correctly. */
+.reveal section.peftguard blockquote {
+  margin: 10px 0;
+  font-size: 0.76em;
+}
+
+.reveal section.peftguard > p {
+  margin: 8px 0;
+  font-size: 0.74em;
+}
+
+/* The source line is a footnote, not body copy. */
+.reveal section.peftguard > p:last-of-type {
+  margin-top: 10px;
+  font-size: 0.6em;
+}
+
+.reveal section.peftguard .card-grid {
+  margin-top: 12px;
+}
+
+.reveal section.peftguard .card {
+  min-height: 96px;
+}
+
+.reveal section.peftguard-lab > p {
+  margin: 8px 0 0;
+  font-size: 0.78em;
+}
+
+.reveal section.peftguard-lab > ol {
+  margin-top: 16px;
+  padding: 14px 20px 14px 46px;
+  font-size: 0.78em;
+}
+
+.reveal section.peftguard-lab > ol li {
+  margin: 4px 0;
+}
+
+.reveal section.peftguard-lab table {
+  margin-top: 16px;
+  font-size: 0.74em;
+}
+
+.reveal section.peftguard-lab blockquote {
+  margin-top: 14px;
+  font-size: 0.74em;
 }
 
 /* "Now build it" — one gate revealed per click. Gates 1-3 are drawn as

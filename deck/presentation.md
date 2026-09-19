@@ -428,37 +428,51 @@ Source: [Safetensors documentation](https://huggingface.co/docs/safetensors/)
 
 # Part IV — Weight-level evidence with PEFTGuard
 
-## PEFTGuard: the question it explores
+## PEFTGuard: the question it explores {.concept-grid .peftguard}
 
 > Does a PEFT adapter contain weight patterns that a trained detector associates with backdoored adapters?
 
-PEFTGuard analyzes PEFT adapter parameters and was published at IEEE Symposium on Security and Privacy 2025.
+Published at **IEEE S&P 2025**. It reads adapter weights only — no prompts, no generation, no trigger to guess. Its answer depends on three things it does not control:
 
-Its result depends on:
+::: {.card-grid .three}
+::: {.card}
+<div class="card-title">Coverage</div>
 
-- Supported base-model and adapter structures
-- Attack types represented during detector training
-- Distribution shift and detector thresholds
+Only the base-model and adapter structures its detector was built for.
+:::
 
-> Present PEFTGuard as a research-grade detector, not a universal industry standard.
+::: {.card}
+<div class="card-title">Training</div>
 
-Source: [PEFTGuard repository](https://github.com/Vincent-HKUSTGZ/PEFTGuard) and [paper](https://arxiv.org/abs/2411.17453)
+Only the attack types represented when the detector was fitted.
+:::
 
-## Workshop PEFTGuard exercise {.exercise}
+::: {.card}
+<div class="card-title">Thresholds</div>
 
-Use prepared artifacts so the exercise fits the schedule:
+Distribution shift moves the scores. A human still picks the cut-off.
+:::
+:::
 
-1. Load precomputed benign and poisoned adapter features
-2. Run detector inference
-3. Compare predictions with known labels
-4. Include one adapter outside the expected distribution
-5. Discuss false positives, false negatives, and abstention
+> A research-grade detector, not a universal standard. Say it that way in a review.
+
+Source: [repository](https://github.com/Vincent-HKUSTGZ/PEFTGuard) · [paper](https://arxiv.org/abs/2411.17453)
+
+## Workshop PEFTGuard exercise {.exercise .peftguard-lab}
+
+Precomputed features, so it fits the slot. The live run is **my hosted UI** — notebook 04 is your offline copy of it.
+
+1. Load the features for A, B and C, and run the detector
+2. Compare each score against the label you already know
+3. C sits outside the detector's training distribution — decide what to do with it
 
 | Adapter | Ground truth | Detector score | Decision |
 |---|---|---:|---|
 | A | benign | ___ | ___ |
 | B | poisoned | ___ | ___ |
 | C | shifted/unknown | ___ | ___ |
+
+> Fill the score column first. The decision column is where *abstain* belongs.
 
 ## Three different outcomes
 
